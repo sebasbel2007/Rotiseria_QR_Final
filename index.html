@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🟣 Rotisería SYM v12.4</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dark.css" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#D32F2F" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SYM" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+
+  <!-- Firebase CDN (modular compat para uso con scripts normales) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <!-- ===== HEADER GLOBAL ===== -->
+  <header class="header" id="header">
+    <div class="header__inner">
+      <div class="header__brand">
+        <!-- Logo SVG inline para no depender de archivos externos -->
+        <svg class="header__logo-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="20" cy="20" r="20" fill="#D32F2F"/>
+          <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="#FCFBF8" font-size="18" font-family="Poppins" font-weight="700">S</text>
+        </svg>
+        <span class="header__logo-text">Rotisería <strong>SYM</strong></span>
+      </div>
+
+      <!-- Nav condicional: se muestra/oculta según rol via JS -->
+      <nav class="header__nav" id="header-nav">
+        <!-- Inyectado por router.js según el rol -->
+      </nav>
+
+      <!-- Acciones del header -->
+      <div class="header__actions" id="header-actions">
+        <!-- Inyectado por router.js -->
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== CONTENEDOR PRINCIPAL DE LA SPA ===== -->
+  <main class="main-content" id="app">
+    <!-- Spinner de carga inicial -->
+    <div class="spinner-container" id="initial-spinner">
+      <div class="spinner"></div>
+      <p class="spinner__text">Cargando...</p>
+    </div>
+  </main>
+
+  <!-- ===== CARRITO LATERAL (sidebar) ===== -->
+  <aside class="cart-sidebar" id="cart-sidebar">
+    <div class="cart-sidebar__header">
+      <h2 class="cart-sidebar__title">Tu Pedido</h2>
+      <button class="cart-sidebar__close" id="cart-close-btn" aria-label="Cerrar carrito">✕</button>
+    </div>
+    <div class="cart-sidebar__body" id="cart-items-container">
+      <!-- Inyectado por carrito.js -->
+    </div>
+    <div class="cart-sidebar__footer" id="cart-footer">
+      <!-- Inyectado por carrito.js -->
+    </div>
+  </aside>
+
+  <!-- Overlay para el carrito y modales -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- ===== CONTENEDOR DE MODALES ===== -->
+  <div class="modal-container" id="modal-container">
+    <!-- Inyectado dinámicamente por cada vista -->
+  </div>
+
+  <!-- ===== TOAST / NOTIFICACIONES ===== -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ===== SCRIPTS JS (orden importa) ===== -->
+  <!-- 1. Firebase -->
+  <script src="js/firebase-config.js"></script>
+  <!-- 2. Utilidades compartidas -->
+  <script src="js/utils.js"></script>
+  <!-- 3. Services -->
+  <script src="js/services/usuarios.js"></script>
+  <script src="js/services/carrito.js"></script>
+  <script src="js/services/productos.js"></script>
+  <script src="js/services/pedidos.js"></script>
+  <script src="js/services/mesas.js"></script>
+  <script src="js/services/config.js"></script>
+  <!-- 4. Views -->
+  <script src="js/views/login.js"></script>
+  <script src="js/views/cliente.js"></script>
+  <script src="js/views/checkout.js"></script>
+  <script src="js/views/tracker.js"></script>
+  <script src="js/views/cocina.js"></script>
+  <script src="js/views/cajero-mesas.js"></script>
+  <script src="js/views/cajero-pos.js"></script>
+  <script src="js/views/cajero.js"></script>
+  <script src="js/views/tv.js"></script>
+  <script src="js/views/admin-menu.js"></script>
+  <script src="js/views/admin-ventas.js"></script>
+  <script src="js/views/admin-mesas.js"></script>
+  <script src="js/views/admin-users.js"></script>
+  <script src="js/views/factura.js"></script>
+  <script src="js/views/admin.js"></script>
+  <!-- 5. Auth + Router + Entry point -->
+  <script src="js/auth.js"></script>
+  <script src="js/router.js"></script>
+  <script src="js/app.js"></script>
+  <!-- 6. Seed: solo desarrollo, llamar seedProductos() desde consola -->
+  <script src="js/seed.js"></script>
+
+</body>
+</html>

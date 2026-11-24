@@ -1,0 +1,245 @@
+GUÍA DE EXPOSICIÓN: NODE.JS vs NGROK EN ROTISERÍA SYM
+================================================================================
+
+FECHA: 2026-09-03
+VERSIÓN: v12.4
+AUTOR: Documentación técnica del sistema
+
+--------------------------------------------------------------------------------
+1. RESUMEN RÁPIDO: DIFERENCIA FUNDAMENTAL
+--------------------------------------------------------------------------------
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  NODE.JS          │  Entorno de EJECUCIÓN (runtime) → CORRE tu código JS    │
+│                   │  Es el "MOTOR" del backend                                │
+├────────────────────┼─────────────────────────────────────────────────────────┤
+│  NGROK            │  Herramienta de TUNELIZACIÓN → EXPONE tu localhost      │
+│                   │  Es el "PUENTE" a internet público                       │
+└────────────────────┴─────────────────────────────────────────────────────────┘
+
+Analogía:
+- Node.js = La cocina del restaurante (donde se preparan los platos/pedidos)
+- ngrok   = El delivery que lleva la comida de la cocina a la casa del cliente
+
+--------------------------------------------------------------------------------
+2. ¿QUÉ ES NODE.JS Y PARA QUÉ LO USAMOS?
+--------------------------------------------------------------------------------
+
+DEFINICIÓN:
+Node.js es un entorno de ejecución de JavaScript fuera del navegador.
+Permite correr código JS en el servidor (backend), no en el navegador del cliente.
+
+EN NUESTRO PROYECTO (archivo: server.js):
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ FUNCIÓN                                 │ DÓNDE EN CÓDIGO                  │
+├─────────────────────────────────────────┼───────────────────────────────────┤
+│ Levanta servidor HTTP (Express)         │ app.listen(4000, ...)            │
+│ Define rutas API REST                   │ app.get('/qr/:mesa.png', ...)    │
+│                                         │ app.post('/api/create-preference')│
+│                                         │ app.post('/api/webhook', ...)    │
+│ Sirve archivos estáticos (PWA)          │ app.use(express.static('public'))│
+│ Genera QR codes dinámicos (PNG)         │ QRCode.toDataURL() en /qr/:mesa  │
+│ Valida firma HMAC de MercadoPago        │ crypto.createHmac('sha256', ...) │
+│ Proxy a Firebase Admin SDK              │ admin.firestore() en webhooks    │
+│ Maneja CORS, JSON parsing, errors       │ middleware Express               │
+└─────────────────────────────────────────┴───────────────────────────────────┘
+
+COMANDO PARA EJECUTAR:
+> node server.js
+
+QUÉ PASA AL EJECUTARLO:
+1. Node lee server.js
+2. Inicializa Express
+3. Conecta a Firebase Admin (credenciales serviceAccountKey.json)
+4. Abre puerto 4000 en localhost (127.0.0.1:4000)
+5. Queda ESCUCHANDO peticiones HTTP
+6. Log: "Servidor escuchando en http://localhost:4000"
+
+SIN node server.js → NO HAY BACKEND → Las mesas no pueden hacer pedidos, 
+la cocina no ve nada, MercadoPago no tiene a dónde mandar el webhook.
+
+--------------------------------------------------------------------------------
+3. ¿QUÉ ES NGROK Y PARA QUÉ LO USAMOS?
+--------------------------------------------------------------------------------
+
+DEFINICIÓN:
+ngrok es una herramienta de tunneling (tunelización).
+Toma un servidor corriendo LOCALMENTE en tu PC (localhost:puerto) y lo expone
+a internet con una URL PÚBLICA HTTPS accesible desde cualquier lado.
+
+EN NUESTRO PROYECTO:
+
+PROBLEMA QUE RESUELVE:
+- Tu server.js corre en localhost:4000 (SOLO visible en TU PC)
+- Los clientes escanean QR con su CELULAR (red distinta, internet público)
+- El webhook de MercadoPago viene de SERVIDORES EXTERNOS de MP
+- NECESITAS una URL pública HTTPS para que funcione todo
+
+COMANDO QUE USAMOS:
+> npx ngrok http 4000
+
+QUÉ HACE ESTE COMANDO:
+1. Conecta a ngrok.com (su nube)
+2. Crea túnel seguro: internet público → tu localhost:4000
+3. Te da una URL pública aleatoria (ej: https://a1b2c3d4.ngrok-free.app)
+4. Cualquier request a esa URL → llega a TU server.js en puerto 4000
+
+URL QUE GENERA (ejemplo):
+https://jokingly-guru-outing.ngrok-free.app
+
+USO PRÁCTICO EN LA ROTISERÍA:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ QUÉ NECESITA URL PÚBLICA          │ CÓMO SE USA                            │
+├───────────────────────────────────┼─────────────────────────────────────────┤
+│ QR de mesa (?mesa=3)              │ Código QR apunta a                     │
+│                                   │ https://xxx.ngrok-free.app/?mesa=3     │
+├───────────────────────────────────┼─────────────────────────────────────────┤
+│ Webhook MercadoPago               │ En config MP:                          │
+│                                   │ https://xxx.ngrok-free.app/api/webhook │
+├───────────────────────────────────┼─────────────────────────────────────────┤
+│ Redirect checkout MP              │ success/failure/pending URLs           │
+│                                   │ usan la URL ngrok                      │
+├───────────────────────────────────┼─────────────────────────────────────────┤
+│ QR imagen PNG (/qr/3.png)         │ Se genera y sirve vía ngrok            │
+└───────────────────────────────────┴─────────────────────────────────────────┘
+
+SIN ngrok → Los QR no funcionan en celulares, MP no puede notificar pagos.
+
+--------------------------------------------------------------------------------
+4. DIFERENCIAS CLAVE RESUMIDAS (PARA EXPOSICIÓN)
+--------------------------------------------------------------------------------
+
+┌─────────────────────┬──────────────────────────────┬──────────────────────────────┐
+│ ASPECTO             │ NODE.JS                      │ NGROK                        │
+├─────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ QUÉ ES              │ Runtime JS (motor)           │ Túnel TCP/HTTP (proxy)       │
+├─────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ QUÉ EJECUTA         │ Tu código (server.js)        │ Nada, solo reenvía tráfico   │
+├─────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ DÓNDE CORRE         │ En TU máquina (localhost)    │ En la nube de ngrok + tu PC  │
+├─────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ PUERTO              │ 4000 (configurable)          │ Expone el 4000 al mundo      │
+├─────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ URL RESULTADA       │ http://localhost:4000        │ https://xxx.ngrok-free.app   │
+├─────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ ACCESIBLE DESDE     │ Solo TU PC                   │ CUALQUIER dispositivo/internet│
+├─────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ PROTOCOLO           │ HTTP (inseguro local)        │ HTTPS (seguro público)       │
+├─────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ COMANDO             │ node server.js               │ npx ngrok http 4000          │
+├─────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ NECESARIO PARA      │ Lógica backend, API, BD      │ QR móviles, Webhooks MP      │
+├─────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ ORDEN DE INICIO     │ 1ro: node server.js          │ 2do: npx ngrok http 4000     │
+└─────────────────────┴──────────────────────────────┴──────────────────────────────┘
+
+--------------------------------------------------------------------------------
+5. FLUJO COMPLETO: CÓMO TRABAJAN JUNTOS
+--------------------------------------------------------------------------------
+
+PASO A PASO PARA LEVANTAR EL SISTEMA COMPLETO:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TERMINAL 1 (Backend)                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ > node server.js                                                            │
+│                                                                             │
+│ Servidor escuchando en http://localhost:4000                                │
+│ Firebase Admin inicializado                                                 │
+│ QR generator listo                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TERMINAL 2 (Túnel público)                                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ > npx ngrok http 4000                                                       │
+│                                                                             │
+│ Session Status    online                                                    │
+│ Account           Gustavo (Plan Free)                                       │
+│ Version           3.x.x                                                     │
+│ Region            us (o sa)                                                 │
+│ Web Interface     http://127.0.0.1:4040                                     │
+│ Forwarding        https://abc123.ngrok-free.app -> http://localhost:4000   │
+│                                                                             │
+│ COPIAR ESTA URL → Configurar en:                                            │
+│ - QR códigos de mesas                                                       │
+│ - MercadoPago Webhook URL                                                   │
+│ - MP Success/Failure/Pending URLs                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ FLUJO DE UN PEDIDO REAL                                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│ 1. CLIENTE escanea QR en mesa 3                                            │
+│    → Su celular abre: https://abc123.ngrok-free.app/?mesa=3                │
+│                                                                             │
+│ 2. ngrok recibe request HTTPS                                              │
+│    → Reenvía a localhost:4000 (server.js)                                  │
+│                                                                             │
+│ 3. server.js (Express) procesa:                                            │
+│    - Sirve index.html (PWA)                                                │
+│    - PWA carga → usa Firebase SDK → lee Firestore                          │
+│                                                                             │
+│ 4. Cliente hace pedido → PWA escribe en Firestore                          │
+│                                                                             │
+│ 5. Cliente elige MercadoPago → PWA llama:                                  │
+│    POST https://abc123.ngrok-free.app/api/mp-preference-for-pedido         │
+│    → ngrok → server.js → Crea preferencia MP → devuelve init_point         │
+│                                                                             │
+│ 6. Cliente paga en MP → MP envía webhook a:                                │
+│    POST https://abc123.ngrok-free.app/api/webhook                          │
+│    → ngrok → server.js → Valida HMAC → Actualiza Firestore (Pagado)        │
+│                                                                             │
+│ 7. Cocina (TV/PWA) ve pedido en TIEMPO REAL vía onSnapshot()               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+6. COMANDOS RESUMEN (CHEAT SHEET)
+--------------------------------------------------------------------------------
+
+LEVANTAR TODO (orden importante):
+
+# Terminal 1 - Backend
+node server.js
+
+# Terminal 2 - Túnel público (esperar a que Terminal 1 diga "escuchando")
+npx ngrok http 4000
+
+# Verificar que funciona:
+# - Abrir https://TU_URL_NGROK/?mesa=1 en navegador → debe cargar la app
+# - Abrir https://TU_URL_NGROK/qr/1.png → debe mostrar imagen QR
+# - En ngrok Web UI (http://127.0.0.1:4040) → ver requests en vivo
+
+NOTAS IMPORTANTES:
+- ngrok Free: URL cambia cada vez que reinicias (copiar nueva URL a MP y QRs)
+- ngrok Paid: Subdominio fijo (ej: rotiseria-sym.ngrok-free.app)
+- Si cambias puerto en server.js → cambiar en ngrok http XXXX
+- Firewall/Antivirus: permitir Node.js y ngrok conexiones entrantes
+
+--------------------------------------------------------------------------------
+7. PUNTOS CLAVE PARA EXPOSICIÓN (QUÉ DECIR)
+--------------------------------------------------------------------------------
+
+1. "Node.js es el MOTOR: corre nuestro backend (server.js) en el puerto 4000."
+
+2. "ngrok es el PUENTE: expone ese puerto local a internet con HTTPS público."
+
+3. "SIN Node.js no hay lógica de negocio, API, webhooks, generación de QR."
+
+4. "SIN ngrok los celulares no pueden acceder al localhost de la PC, 
+   y MercadoPago no puede mandar notificaciones de pago."
+
+5. "Orden SIEMPRE: 1) node server.js → 2) npx ngrok http 4000"
+
+6. "La URL que da ngrok es la que ponemos en los códigos QR y en la config de MercadoPago."
+
+7. "ngrok Web Interface (localhost:4040) sirve para DEBUG: ver requests/responses en vivo."
+
+================================================================================
+FIN DE DOCUMENTO 04_Node_Ngrok.txt
+================================================================================

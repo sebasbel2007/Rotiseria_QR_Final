@@ -1,0 +1,426 @@
+GUÍA DE EXPOSICIÓN: BASE DE DATOS FIREBASE / FIRESTORE EN ROTISERÍA SYM
+================================================================================
+
+FECHA: 2026-09-03
+VERSIÓN: v12.4
+AUTOR: Documentación técnica del sistema
+
+--------------------------------------------------------------------------------
+1. ¿QUÉ ES FIREBASE / FIRESTORE?
+--------------------------------------------------------------------------------
+Firebase es una plataforma de Google para desarrollo de apps (Backend-as-a-Service).
+Firestore es su base de datos NoSQL nativa en la nube.
+
+NO es SQL: no usa tablas, filas, ni esquemas rígidos.
+ES NoSQL: estructura de DOCUMENTOS (tipo JSON) organizados en COLECCIONES.
+
+Analogía visual:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ COLECCIÓN: pedidos                                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DOCUMENTO (auto-id: "abc123")                                               │
+│ {                                                                           │
+│   cliente_uid: "mesa:3",                                                    │
+│   nombre_cliente: "Juan Pérez",                                             │
+│   mesa_id: "3",                                                             │
+│   items: [ { producto_id: "p1", nombre: "Milanesa", precio: 3000, qty: 1 } ],│
+│   total: 3000,                                                              │
+│   estado_cocina: "Pendiente confirma caja",                                 │
+│   estado_pago: "Pendiente",                                                 │
+│   metodo_pago: "Efectivo",                                                  │
+│   fecha_hora_creacion: Timestamp,                                           │
+│   ...                                                                       │
+│ }                                                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Ventajas clave para nosotros:
+- Esquema flexible: cada pedido puede tener campos distintos (notas, variantes, delivery, etc.)
+- Tiempo real nativo: onSnapshot() → la cocina ve pedidos al instante sin recargar
+- Escalabilidad automática: de 10 a 10.000 pedidos sin tocar infraestructura
+- Offline-first: la PWA funciona sin internet y sincroniza al reconectar
+
+--------------------------------------------------------------------------------
+2. DIFERENCIAS CLAVE: SQL vs FIRESTORE (NoSQL)
+--------------------------------------------------------------------------------
+
+┌──────────────────────┬──────────────────────────────┬──────────────────────────────┐
+│ ASPECTO              │ SQL (Relacional)             │ FIRESTORE (NoSQL Documental) │
+├──────────────────────┼──────────────────────────────┼──────────────────────────────┤
+│ Estructura           │ Tablas + filas + columnas    │ Colecciones + Documentos     │
+│ Esquema              │ Rígido (ALTER TABLE)         │ Flexible (cada doc distinto) │
+│ Relaciones           │ JOINs, FK, claves foráneas   │ Subcolecciones / referencias │
+│ Consultas complejas  │ SQL JOIN, GROUP BY, UNION    │ Índices compuestos obligatorios│
+│ Transacciones        │ ACID completas               │ Transacciones / Batch writes │
+│ Escalado             │ Vertical / Sharding manual   │ Horizontal automático        │
+│ Tiempo real          │ Polling / triggers extra     │ onSnapshot() nativo          │
+│ Offline              │ Difícil                      │ SDK maneja cache + sync      │
+└──────────────────────┴──────────────────────────────┴──────────────────────────────┘
+
+En Rotisería SYM:
+- NO tenemos servidor SQL propio ni base de datos relacional
+- TODO vive en Firestore: pedidos, mesas, usuarios, config, productos, categorías
+- Usamos subcolecciones solo si necesario (ej: pedidos/{id}/items opcional)
+- Preferimos duplicar datos (denormalizar) antes que hacer JOINs costosos
+
+--------------------------------------------------------------------------------
+3. LAS 3 PIEZAS FUNDAMENTALES QUE USAMOS EN EL PROYECTO
+--------------------------------------------------------------------------------
+
+═══════════════════════════════════════════════════════════════════════════════
+A. FIRESTORE DATABASE (Datos + Consultas + Tiempo Real)
+═══════════════════════════════════════════════════════════════════════════════
+
+COLECCIONES PRINCIPALES:
+┌──────────────┬────────────────────────────────────────────────────────────────┐
+│ Colección    │ Qué guarda                                                     │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ pedidos      │ Cada pedido = 1 doc. Campos: mesa_id, items[], total,         │
+│              │ estado_cocina, estado_pago, metodo_pago, fechas, notas, etc.  │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ mesas        │ Config de cada mesa: numero, activa, qr_url, scan_session_id  │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ usuarios     │ Staff: email, rol (cocina/cajero/admin/tv), nombre, activo    │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ config       │ Doc único "categorias": array de {id, nombre, icono, visible} │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ productos    │ (Opcional/cache) Catálogo sincronizado desde config             │
+└──────────────┴────────────────────────────────────────────────────────────────┘
+
+CONSULTAS REALES EN CÓDIGO (cliente.js, cocina.js, router.js, pedidos.js):
+
+// 1. CREAR PEDIDO (mesa escanea QR → hace pedido)
+db.collection('pedidos').add({
+  cliente_uid: "mesa:3",
+  mesa_id: "3",
+  items: [...],
+  total: 3000,
+  estado_cocina: "Pendiente confirma caja",
+  estado_pago: "Pendiente",
+  metodo_pago: "Efectivo",
+  fecha_hora_creacion: firebase.firestore.FieldValue.serverTimestamp()
+})
+
+// 2. TIEMPO REAL COCINA: escucha pedidos activos (onSnapshot)
+db.collection('pedidos')
+  .where('estado_cocina', 'in', ['Pendiente confirma caja', 'Pendiente', 'En Preparación'])
+  .orderBy('estado_cocina').orderBy('fecha_hora_creacion')
+  .onSnapshot(snapshot => { /* renderiza tabla cocina */ })
+
+// 3. TIEMPO REAL CLIENTE: ve sus pedidos de la mesa
+db.collection('pedidos')
+  .where('mesa_id', '==', '3')
+  .where('entregado_mozo', '==', false)
+  .orderBy('fecha_hora_creacion')
+  .onSnapshot(snapshot => { /* renderiza en app cliente */ })
+
+// 4. ACTUALIZAR ESTADO COCINA (botón "En Preparación" → "Listo")
+db.collection('pedidos').doc(pedidoId).update({
+  estado_cocina: "Listo para Retirar/Comer",
+  fecha_listo: firebase.firestore.FieldValue.serverTimestamp()
+})
+
+// 5. MARCAR PAGADO (webhook MP o caja manual)
+db.collection('pedidos').doc(pedidoId).update({
+  estado_pago: "Pagado",
+  metodo_pago: "MercadoPago",
+  mp_payment_id: "123456789",
+  fecha_cobro: firebase.firestore.FieldValue.serverTimestamp()
+})
+
+// 6. BATCH: marcar TODOS los pedidos de una mesa como pagados (caja)
+const batch = db.batch();
+pedidosMesa.forEach(doc => batch.update(doc.ref, { estado_pago: 'Pagado', ... }));
+await batch.commit();
+
+═══════════════════════════════════════════════════════════════════════════════
+B. SECURITY REGLAS (firestore.rules) - Control de Acceso
+═══════════════════════════════════════════════════════════════════════════════
+
+Son el "firewall" de la base de datos. Se evalúan ANTES de cada operación.
+Si una regla falla → permission-denied (403), la operación no llega a la BDD.
+
+ARCHIVO: firestore.rules (deployado con `firebase deploy --only firestore:rules`)
+
+REGLAS CLAVE DE NUESTRO SISTEMA:
+
+// Helper: ¿es request de mesa anónima (QR)?
+function isMesaRequest() {
+  return request.auth == null && request.resource.data.cliente_uid.matches('^mesa:\\d+$');
+}
+
+// Helper: ¿es el dueño del documento?
+function isOwner(doc) {
+  return request.auth != null && doc.data.cliente_uid == request.auth.uid;
+}
+
+// Helper: ¿tiene rol de staff?
+function hasRole(roles) {
+  return request.auth != null && request.auth.token.rol in roles;
+}
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ┌─────────────────────────────────────────────────────────────────┐
+    // │ COLECCIÓN: pedidos                                              │
+    // └─────────────────────────────────────────────────────────────────┘
+    match /pedidos/{pedidoId} {
+
+      // CREATE: Mesas anónimas (QR) PUEDEN crear pedidos
+      allow create: if isMesaRequest()
+        && request.resource.data.keys().hasAll([
+          'cliente_uid', 'mesa_id', 'items', 'total',
+          'estado_cocina', 'estado_pago', 'metodo_pago'
+        ]);
+
+      // READ: Dueño (mesa) O staff (cocina/cajero/admin/tv)
+      allow get, list: if isOwner(resource) || hasRole(['cocina','cajero','admin','tv']);
+
+      // UPDATE: Diferentes campos según quién pide
+      // - Mesa: solo puede cancelar su pedido (estado_cocina → Cancelado)
+      // - Cocina: actualiza estado_cocina, fecha_listo, entregado_mozo
+      // - Cajero: actualiza estado_pago, metodo_pago, mp_payment_id, fecha_cobro
+      allow update: if (
+        // Mesa cancela
+        (isOwner(resource) && request.resource.data.estado_cocina == 'Cancelado'
+         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado_cocina']))
+        ||
+        // Cocina avanza estado
+        (hasRole(['cocina']) && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['estado_cocina', 'fecha_listo', 'entregado_mozo']))
+        ||
+        // Cajero maneja pago
+        (hasRole(['cajero','admin']) && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['estado_pago', 'metodo_pago', 'mp_payment_id', 'mp_status', 'fecha_cobro']))
+      );
+
+      // DELETE: Nadie borra (soft delete con estado_cocina: 'Cancelado')
+      allow delete: if false;
+    }
+
+    // ┌─────────────────────────────────────────────────────────────────┐
+    // │ COLECCIÓN: mesas                                                │
+    // └─────────────────────────────────────────────────────────────────┘
+    match /mesas/{mesaId} {
+      // Solo staff lee/actualiza config de mesas
+      allow read, write: if hasRole(['cajero','admin']);
+      // Mesas anónimas solo leen su propio doc para validar QR
+      allow get: if isMesaRequest() && resource.data.numero == request.resource.data.mesa_id;
+    }
+
+    // ┌─────────────────────────────────────────────────────────────────┐
+    // │ COLECCIÓN: usuarios (staff)                                     │
+    // └─────────────────────────────────────────────────────────────────┘
+    match /usuarios/{uid} {
+      allow read: if hasRole(['admin']) || request.auth.uid == uid;
+      allow write: if hasRole(['admin']);
+    }
+
+    // ┌─────────────────────────────────────────────────────────────────┐
+    // │ COLECCIÓN: config (categorías menú)                             │
+    // └─────────────────────────────────────────────────────────────────┘
+    match /config/{docId} {
+      allow read: if true;  // Público: cualquiera ve el menú
+      allow write: if hasRole(['admin']);
+    }
+  }
+}
+
+POR QUÉ ESTAS REGLAS SON CRÍTICAS:
+- Evitan que una mesa vea pedidos de otra mesa
+- Evitan que un cliente cambie el precio o el estado de pago
+- Permiten tiempo real SOLO a quienes tienen rol (cocina, cajero, TV)
+- Mesas anónimas (sin login) solo pueden CREAR pedidos, no leer listados
+
+═══════════════════════════════════════════════════════════════════════════════
+C. ÍNDICES DE COLECCIÓN (Composite Indexes) - Consultas Rápidas
+═══════════════════════════════════════════════════════════════════════════════
+
+Firestore NO permite queries arbitrarias sin índice.
+Si haces: .where(A).where(B).orderBy(C) → NECESITAS índice compuesto (A, B, C).
+Sin índice → Error: "failed-precondition: The query requires an index".
+
+ÍNDICES CREADOS EN CONSOLE FIREBASE (Colección: pedidos):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ÍNDICE                                                                      │
+│ QUERY QUE LO USA                                                            │
+│ DÓNDE EN CÓDIGO                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ mesa_id ASC + entregado_mozo ASC + estado_cocina ASC                       │
+│ WHERE mesa_id == '3' AND entregado_mozo == false                           │
+│   AND estado_cocina NOT IN ['Cancelado','Entregado']                       │
+│ router.js → _setupMesaMode() ← CRÍTICO v12.4                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ estado_cocina ASC + mesa_id ASC + fecha_hora_creacion DESC                 │
+│ WHERE estado_cocina IN [...] ORDER BY fecha_hora_creacion DESC             │
+│ cocina.js → escucharPedidosCocina()                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ mesa_id ASC + fecha_hora_creacion ASC                                      │
+│ WHERE mesa_id == '3' ORDER BY fecha_hora_creacion ASC                      │
+│ cliente.js → escucharPedidosMesa()                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ estado_pago ASC + mesa_id ASC                                              │
+│ WHERE estado_pago != 'Pagado' AND mesa_id == '3'                           │
+│ pedidos.js → obtenerPedidosNoPagadosMesa()                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ entregado_mozo ASC + fecha_listo DESC                                      │
+│ WHERE entregado_mozo == true ORDER BY fecha_listo DESC                     │
+│ TV / historial cocina                                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+CÓMO CREARLOS:
+1. Firebase Console → Firestore → Índices → "Crear índice"
+2. O link directo en error de consola: "Create index: https://console.firebase.../indexes?create_composite=..."
+3. Esperar estado "Habilitado" (puede tardar minutos si hay muchos datos)
+
+IMPORTANTE: Los índices de campo único (single-field) se crean automáticos.
+Solo los COMPUESTOS (multi-campo con orderBy o in/not-in) requieren acción manual.
+
+═══════════════════════════════════════════════════════════════════════════════
+D. FIREBASE AUTH (Autenticación de Staff)
+═══════════════════════════════════════════════════════════════════════════════
+
+NO usamos Auth para clientes (mesas). Los clientes entran SIN login vía QR.
+Auth SOLO para staff interno: cocina, cajero, admin, TV.
+
+FLUJO LOGIN (login.html + auth.js):
+1. Usuario ingresa email/contraseña
+2. firebase.auth().signInWithEmailAndPassword(email, pass)
+3. Firebase devuelve UserCredential → token JWT (se renueva auto cada hora)
+4. Token se adjunta AUTOMÁTICAMENTE en TODAS las operaciones Firestore SDK
+5. Reglas firestore.rules leen: request.auth.token.rol → decidid permisos
+
+ROLES EN NUESTRO SISTEMA (guardados en usuario.customClaims o doc usuarios/{uid}):
+┌──────────────┬────────────────────────────────────────────────────────────────┐
+│ ROL          │ QUÉ PUEDE HACER                                                │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ admin        │ Todo: usuarios, config, mesas, reportes, reglas               │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ cajero       │ Ver pedidos, marcar pagados (efectivo/MP), caja, mesas         │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ cocina       │ Ver pedidos activos, avanzar estado (Pendiente→Listo),         │
+│              │ marcar entregado_mozo, TV cocina                               │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ tv           │ Solo lectura: escucha pedidos para pantalla TV cocina          │
+└──────────────┴────────────────────────────────────────────────────────────────┘
+
+CÓMO ASIGNAR ROL (solo admin, vía Functions o Console):
+// En Firebase Console → Authentication → Usuarios → (⋮) → Custom claims
+{ "rol": "cocina" }
+
+// O via Admin SDK (Node.js):
+admin.auth().setCustomUserClaims(uid, { rol: 'cajero' })
+
+EN REGLAS SE USA: request.auth.token.rol
+function hasRole(roles) {
+  return request.auth != null && request.auth.token.rol in roles;
+}
+
+--------------------------------------------------------------------------------
+4. ARQUITECTURA DE DATOS RESUMIDA EN ROTISERÍA SYM
+--------------------------------------------------------------------------------
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           FLUJO DE DATOS PRINCIPAL                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+CLIENTE (Mesa QR)                    STAFF (Cocina/Cajero/TV)           SERVIDOR (Node.js)
+┌─────────────────┐                  ┌─────────────────────┐            ┌──────────────┐
+│ Escanea QR      │                  │ Login email/pass    │            │ Express      │
+│ ?mesa=3         │                  │ → Firebase Auth     │            │ server.js    │
+└────────┬────────┘                  └──────────┬──────────┘            └──────┬───────┘
+         │                                      │                              │
+         ▼                                      ▼                              ▼
+┌─────────────────┐                  ┌─────────────────────┐            ┌──────────────┐
+│ Carga app       │                  │ Token JWT auto      │            │ Webhook MP   │
+│ (HTML/JS/CSS)   │                  │ en cada request     │            │ /api/webhook │
+└────────┬────────┘                  └──────────┬──────────┘            └──────┬───────┘
+         │                                      │                              │
+         ▼                                      ▼                              ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        FIRESTORE (Fuente de verdad única)                   │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
+│  │ pedidos  │  │ mesas    │  │ usuarios │  │ config   │  │ (subcols...) │  │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘  └──────┬───────┘  │
+│       │             │             │             │             │            │
+│       └─────────────┼─────────────┼─────────────┼─────────────┘            │
+│                     ▼             ▼             ▼                          │
+│            ┌─────────────────────────────────────────────┐                 │
+│            │         SECURITY RULES (firestore.rules)    │                 │
+│            │  - Valida auth.token.rol                    │                 │
+│            │  - Valida ownership (cliente_uid)           │                 │
+│            │  - Controla campos permitidos por rol       │                 │
+│            └─────────────────────────────────────────────┘                 │
+│                              │                                             │
+│                              ▼                                             │
+│            ┌─────────────────────────────────────────────┐                 │
+│            │         COMPOSITE INDEXES (Habilitados)     │                 │
+│            │  - mesa_id + entregado_mozo + estado_cocina │                 │
+│            │  - estado_cocina + mesa_id + fecha          │                 │
+│            │  - ... (ver tabla arriba)                   │                 │
+│            └─────────────────────────────────────────────┘                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+         │                              │                              │
+         │ onSnapshot()                 │ onSnapshot()                 │ Admin SDK
+         ▼                              ▼                              ▼
+┌─────────────────┐            ┌──────────────────┐            ┌──────────────────┐
+│ Cliente ve:     │            │ Cocina ve:       │            │ Webhook MP       │
+│ - Su pedido     │            │ - TODOS pedidos  │            │ actualiza        │
+│ - Estado tiempo │            │   activos        │            │ estado_pago=     │
+│   real          │            │ - Avanza estado  │            │ 'Pagado'         │
+└─────────────────┘            └──────────────────┘            └──────────────────┘
+
+--------------------------------------------------------------------------------
+5. ERRORES COMUNES Y SOLUCIONES
+--------------------------------------------------------------------------------
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ERROR                              │ CAUSA                   │ SOLUCIÓN     │
+├────────────────────────────────────┼─────────────────────────┼──────────────┤
+│ permission-denied                  │ Reglas bloquean         │ Revisar      │
+│ (create/list/update)               │ operación según rol     │ firestore.rules│
+├────────────────────────────────────┼─────────────────────────┼──────────────┤
+│ failed-precondition: query         │ Falta índice compuesto  │ Crear en     │
+│ requires index                     │ (where + orderBy + in)  │ Console      │
+├────────────────────────────────────┼─────────────────────────┼──────────────┤
+│ unavailable / deadline-exceeded    │ Red / offline           │ SDK reintenta│
+│                                    │                         │ auto + cache │
+├────────────────────────────────────┼─────────────────────────┼──────────────┤
+│ auth/argument-error                │ Token expirado          │ signInAgain  │
+├────────────────────────────────────┼─────────────────────────┼──────────────┤
+│ Quota exceeded (lecturas/escrituras)│ Plan Spark (gratis)    │ Optimizar    │
+│                                    │ límite diario           │ queries +    │
+│                                    │                         │ cache        │
+└────────────────────────────────────┴─────────────────────────┴──────────────┘
+
+LÍMITES PLAN SPARK (GRATIS) - IMPORTANTE PARA EXPO:
+- Lecturas: 50.000/día
+- Escrituras: 20.000/día
+- Borrados: 20.000/día
+- Almacenamiento: 1 GiB
+- Conexiones simultáneas: ~100 (suficiente para rotisería)
+
+Optimizaciones que hacemos:
+- onSnapshot() en vez de get() repetidos (1 lectura inicial + updates)
+- Queries con limit() y filtros precisos (menos docs leídos)
+- Cache offline del SDK evita re-leer al reconectar
+
+--------------------------------------------------------------------------------
+6. RESUMEN PARA EXPOSICIÓN (PUNTOS CLAVE A DECIR)
+--------------------------------------------------------------------------------
+
+1. "No usamos SQL ni servidor de base de datos propio. Usamos Firestore (NoSQL de Firebase)."
+2. "Los datos son documentos JSON en colecciones: pedidos, mesas, usuarios, config."
+3. "La gran ventaja: TIEMPO REAL nativo. La cocina ve pedidos al instante con onSnapshot()."
+4. "Tres pilares que configuramos y usamos:"
+   a) FIRESTORE: consultas, writes, batch, tiempo real
+   b) SECURITY RULES: control de acceso por rol + ownership (mesa ve solo lo suyo)
+   c) COMPOSITE INDEXES: requeridos para queries compuestas (where + orderBy + not-in)
+5. "Auth SOLO para staff (cocina/cajero/admin). Clientes entran SIN login vía QR."
+6. "Reglas evitan que una mesa vea pedidos de otra, o que un cliente cambie su estado de pago."
+7. "Índices se crean en Firebase Console; sin ellos las queries complejas fallan."
+8. "Todo sincroniza offline: si se corta internet, la PWA sigue funcionando y sincroniza al volver."
+
+================================================================================
+FIN DE DOCUMENTO 03_Base_de_Datos_Firebase.txt
+================================================================================

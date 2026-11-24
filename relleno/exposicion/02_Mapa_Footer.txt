@@ -1,0 +1,82 @@
+GUÍA DE EXPOSICIÓN: MAPA EN FOOTER - ROTISERÍA SYM
+================================================================================
+
+FECHA: 2026-09-03
+VERSIÓN: v12.4
+
+--------------------------------------------------------------------------------
+1. ¿QUÉ FUNCIÓN CUMPLE EL MAPA EN EL FOOTER?
+--------------------------------------------------------------------------------
+Referencia visual inmediata de la ubicación del local:
+- Dirección exacta + punto de referencia
+- Orientación para que el cliente sepa cómo llegar
+- Confianza: "el local existe físicamente"
+- Está en TODAS las páginas (footer global)
+
+--------------------------------------------------------------------------------
+2. ¿CÓMO SE IMPLEMENTA? (MÉTODO IFRAME - EL QUE USAMOS)
+--------------------------------------------------------------------------------
+CERO JavaScript, CERO API Keys, CERO backend.
+
+PASOS:
+1. Google Maps → Buscar dirección del local
+2. Botón "Compartir" → "Insertar mapa" → Copiar `<iframe>`
+3. Pegar en `index.html` (footer)
+4. Ajustar `width="100%" height="200"` + `style="border:0"`
+
+CÓDIGO REAL EN NUESTRO PROYECTO (index.html línea ~XX):
+```html
+<footer class="footer">
+  <div class="footer-mapa">
+    <iframe
+      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3284.123456789!2d-58.123456!3d-34.123456!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x95bcb123456789%3A0xabcdef123456!2sRotiser%C3%ADa%20SYM!5e0!3m2!1ses!2sar!4v1234567890123"
+      width="100%" height="200" style="border:0;" allowfullscreen=""
+      loading="lazy" referrerpolicy="no-referrer-when-downgrade">
+    </iframe>
+  </div>
+  <p class="footer-direccion">Av. Siempre Viva 123 - Esq. Calle Falsa - CABA</p>
+</footer>
+```
+
+CSS (styles.css):
+```css
+.footer-mapa { width: 100%; max-width: 600px; margin: 0 auto 0.5rem; }
+.footer-mapa iframe { border-radius: 8px; }
+.footer-direccion { text-align: center; font-size: 0.85rem; color: #666; }
+```
+
+--------------------------------------------------------------------------------
+3. POR QUÉ IFRAME Y NO GOOGLE MAPS JAVASCRIPT API
+--------------------------------------------------------------------------------
+┌──────────────────┬──────────────────────┬────────────────────────────────┐
+│                  │ IFRAME (usamos)      │ JS API (NO usamos)             │
+├──────────────────┼──────────────────────┼────────────────────────────────┤
+│ API Key          │ No requerida         │ Obligatoria (facturación)      │
+│ Cuota/Costo      │ Gratis ilimitado     │ $7 c/1000 cargas (tras gratis) │
+│ Código           │ 1 línea HTML         │ 50+ líneas JS + callback       │
+│ Mantenimiento    │ Cero                 │ Versiones, keys, restricciones │
+│ Interactividad   │ Zoom, mover, street  │ Total (marcadores, rutas, etc) │
+│ Performance      │ loading="lazy"       │ Bloquea render si no async     │
+└──────────────────┴──────────────────────┴────────────────────────────────┘
+
+Para footer estático: iframe es la decisión correcta.
+
+--------------------------------------------------------------------------------
+4. DETALLES TÉCNICOS IMPORTANTES
+--------------------------------------------------------------------------------
+- `loading="lazy"`: el iframe no carga hasta que el footer entra en viewport (ahorra ancho de banda)
+- `referrerpolicy="no-referrer-when-downgrade"`: privacidad al navegar desde HTTPS a HTTP
+- `allowfullscreen`: permite botón "Pantalla completa" en el mapa
+- Responsive: `width="100%"` + `max-width` en contenedor padre
+
+--------------------------------------------------------------------------------
+5. PUNTOS CLAVE EXPO
+--------------------------------------------------------------------------------
+- "Cero dependencias, cero keys, cero backend: solo HTML copiado de Google Maps"
+- "loading='lazy' = no afecta performance inicial de la página"
+- "Gratis para siempre, sin límites de cuota ni facturación"
+- "Si cambia la dirección: 2 min (nuevo iframe de Maps → pegar → deploy)"
+
+================================================================================
+FIN DOCUMENTO 02_Mapa_Footer.txt
+================================================================================

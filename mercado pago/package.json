@@ -1,0 +1,22 @@
+{
+  "name": "cursos-sym",
+  "version": "1.0.0",
+  "description": "Plataforma de cursos online — Cursos SyM",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cloudinary": "^2.10.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
+    "firebase-admin": "^14.2.0",
+    "mercadopago": "^2.13.0"
+  },
+  "allowScripts": {
+    "firebase-admin@14.2.0": true,
+    "protobufjs@7.6.5": true
+  }
+}

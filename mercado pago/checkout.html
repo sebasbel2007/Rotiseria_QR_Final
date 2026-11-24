@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<!-- File: plataforma cursos SyM/pages/checkout/checkout.html -->
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout — Cursos SyM</title>
+  <link rel="stylesheet" href="../../assets/css/main.css" />
+  <link rel="stylesheet" href="../../assets/css/components.css" />
+  <link rel="stylesheet" href="../../assets/css/responsive.css" />
+</head>
+<body>
+
+<div class="main-content">
+
+<!-- ─── Contenido ───────────────────────────────────────────── -->
+<main style="min-height:calc(100vh - var(--topbar-height));padding:3rem 1.5rem;display:flex;align-items:flex-start;justify-content:center;">
+  <div style="width:100%;max-width:960px;display:grid;grid-template-columns:1fr 380px;gap:2rem;align-items:start;">
+
+    <!-- Columna izquierda: pago -->
+    <div>
+      <div style="margin-bottom:2rem;">
+        <h1 style="font-size:1.5rem;margin-bottom:.375rem;" id="checkout-title">Procesando...</h1>
+        <p id="checkout-subtitle" style="font-size:.9rem;"></p>
+      </div>
+
+      <!-- Términos (solo si es curso) -->
+      <div id="terms-block" class="hidden" style="
+        background:var(--bg-card);border:1px solid var(--border);
+        border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem;
+      ">
+        <label style="display:flex;align-items:flex-start;gap:.75rem;cursor:pointer;">
+          <input type="checkbox" id="terms-check" style="margin-top:3px;accent-color:var(--accent);flex-shrink:0;" />
+          <span style="font-size:.875rem;color:var(--text-secondary);line-height:1.6;">
+            Acepto los <a href="../../legal/terms.html" target="_blank">Términos y condiciones</a>
+            y la <a href="../../legal/privacy.html" target="_blank">Política de privacidad</a>.
+            Entiendo que este es un pago único por acceso al curso y que el reembolso
+            solo aplica si consumí menos del 50% del contenido.
+          </span>
+        </label>
+      </div>
+
+      <!-- Contenedor del brick de MP -->
+      <div id="payment-loader" style="
+        display:flex;align-items:center;justify-content:center;
+        padding:3rem;background:var(--bg-card);border:1px solid var(--border);
+        border-radius:var(--radius-lg);
+      ">
+        <div class="loader-spinner"></div>
+      </div>
+      <div id="payment-brick-container"></div>
+
+      <!-- Mensaje de error si no está autenticado -->
+      <div id="auth-error" class="hidden" style="
+        background:var(--error-dim);border:1px solid var(--error);
+        border-radius:var(--radius-lg);padding:1.5rem;text-align:center;
+      ">
+        <p style="color:var(--error);font-weight:600;margin-bottom:1rem;">Necesitás iniciar sesión para continuar.</p>
+        <a href="../auth/login.html" class="btn btn-primary">Ingresar</a>
+      </div>
+    </div>
+
+    <!-- Columna derecha: resumen -->
+    <div style="position:sticky;top:1.5rem;">
+      <div class="card" id="order-summary">
+        <div class="card-header">
+          <span class="card-title">Resumen</span>
+        </div>
+
+        <!-- Membresía -->
+        <div id="summary-membership" class="hidden">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;">
+            <div style="
+              width:48px;height:48px;border-radius:var(--radius-md);
+              background:var(--accent-dim);display:flex;align-items:center;justify-content:center;
+              flex-shrink:0;
+            ">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="color:var(--accent);">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:.9375rem;">Membresía Profesor</div>
+              <div style="font-size:.8125rem;color:var(--text-muted);">Pago único — acceso permanente</div>
+            </div>
+          </div>
+          <ul style="font-size:.8125rem;color:var(--text-secondary);display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.25rem;">
+            <li style="display:flex;gap:.5rem;align-items:center;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="color:var(--success);flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              Creá cursos ilimitados
+            </li>
+            <li style="display:flex;gap:.5rem;align-items:center;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="color:var(--success);flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              Recibís el 70% de cada venta
+            </li>
+            <li style="display:flex;gap:.5rem;align-items:center;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="color:var(--success);flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              Panel de estadísticas y ventas
+            </li>
+            <li style="display:flex;gap:.5rem;align-items:center;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="color:var(--success);flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+              Soporte prioritario
+            </li>
+          </ul>
+        </div>
+
+        <!-- Curso -->
+        <div id="summary-course" class="hidden">
+          <div id="course-thumbnail-wrap" style="margin-bottom:1rem;border-radius:var(--radius-md);overflow:hidden;">
+            <img id="course-thumbnail" src="" alt="" style="width:100%;aspect-ratio:16/9;object-fit:cover;" />
+          </div>
+          <div style="font-weight:700;font-size:.9375rem;margin-bottom:.25rem;" id="course-title-summary">—</div>
+          <div style="font-size:.8125rem;color:var(--text-muted);margin-bottom:1rem;" id="course-teacher-summary">—</div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;" id="course-tags-summary"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+          <span style="font-size:.875rem;color:var(--text-secondary);">Subtotal</span>
+          <span style="font-weight:600;" id="summary-subtotal">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+          <span style="font-size:.875rem;color:var(--text-secondary);">Descuentos</span>
+          <span style="color:var(--success);font-weight:600;">$0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-top:1rem;border-top:1px solid var(--border);">
+          <span style="font-weight:700;">Total</span>
+          <span style="font-size:1.25rem;font-weight:800;color:var(--accent);" id="summary-total">—</span>
+        </div>
+      </div>
+
+      <p style="font-size:.75rem;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.6;">
+        Pago procesado de forma segura por Mercado Pago.<br>
+        Cursos SyM no almacena datos de tarjetas.
+      </p>
+    </div>
+
+  </div>
+</main>
+
+</div><!-- /.main-content -->
+
+<style>
+@media (max-width: 767px) {
+  main > div {
+    grid-template-columns: 1fr !important;
+  }
+  main > div > div:last-child {
+    position: static !important;
+    order: -1;
+  }
+}
+</style>
+
+<script type="module">
+  import { showToast, formatARS, onSessionChange } from '../../assets/js/app.js';
+  import { renderSidebar } from '../../assets/js/sidebar.js';
+  import { getCourse } from '../../assets/js/db.js';
+  import { createPreference, renderCheckoutButton } from '../../assets/js/payments.js';
+
+  const params   = new URLSearchParams(window.location.search);
+  const type     = params.get('type');
+  const courseId = params.get('courseId');
+
+  // Limpiar flag de checkout pendiente
+  sessionStorage.removeItem('sym-pending-checkout');
+
+  // Sesión única de Firebase (onSessionChange) — sin listeners duplicados
+  onSessionChange((session) => {
+    renderSidebar(session, 'checkout');
+    const user = session && session.user;
+    if (!user) {
+      document.getElementById('payment-loader').classList.add('hidden');
+      document.getElementById('auth-error').classList.remove('hidden');
+      return;
+    }
+
+    if (type === 'membership') {
+      initMembership(user);
+    } else if (type === 'course' && courseId) {
+      initCourse(user, courseId);
+    } else {
+      showToast('Parámetros de checkout inválidos.', 'error');
+      setTimeout(() => window.location.href = '../../index.html', 2000);
+    }
+  });
+
+  async function initMembership(user) {
+    document.getElementById('checkout-title').textContent    = 'Activar membresía de Profesor';
+    document.getElementById('checkout-subtitle').textContent = 'Pago único de $20.000 ARS para publicar cursos en la plataforma.';
+    document.getElementById('summary-membership').classList.remove('hidden');
+    document.getElementById('summary-subtotal').textContent  = formatARS(20000);
+    document.getElementById('summary-total').textContent     = formatARS(20000);
+
+    try {
+      const pref = await createPreference('membership', { userId: user.uid });
+      document.getElementById('payment-loader').classList.add('hidden');
+      renderCheckoutButton('payment-brick-container', pref.id, pref.init_point);
+    } catch (err) {
+      console.error(err);
+      document.getElementById('payment-loader').classList.add('hidden');
+      document.getElementById('payment-brick-container').innerHTML = `
+        <div style="background:var(--error-dim);border:1px solid var(--error);border-radius:var(--radius-lg);padding:1.5rem;text-align:center;">
+          <p style="color:var(--error);font-weight:600;margin-bottom:1rem;">Error al conectar con Mercado Pago.</p>
+          <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:1rem;">${err.message}</p>
+          <button onclick="location.reload()" class="btn btn-primary btn-sm">Reintentar</button>
+        </div>`;
+    }
+  }
+
+  async function initCourse(user, id) {
+    const course = await getCourse(id);
+    if (!course) {
+      showToast('Curso no encontrado.', 'error');
+      setTimeout(() => window.location.href = '../../index.html', 2000);
+      return;
+    }
+
+    document.getElementById('checkout-title').textContent    = 'Confirmar compra';
+    document.getElementById('checkout-subtitle').textContent = 'Revisá el resumen antes de pagar.';
+    document.getElementById('terms-block').classList.remove('hidden');
+    document.getElementById('summary-course').classList.remove('hidden');
+
+    const thumb = course.thumbnailURL || '';
+    const thumbImg = document.getElementById('course-thumbnail');
+    if (thumb) { thumbImg.src = thumb; thumbImg.alt = course.title; }
+    else { document.getElementById('course-thumbnail-wrap').innerHTML = `<div style="width:100%;aspect-ratio:16/9;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;color:var(--text-muted);">Sin miniatura</div>`; }
+
+    document.getElementById('course-title-summary').textContent   = course.title;
+    document.getElementById('course-teacher-summary').textContent = `por ${course.teacherName}`;
+
+    const tagsWrap = document.getElementById('course-tags-summary');
+    (course.tags || []).slice(0, 3).forEach(tag => {
+      const span = document.createElement('span');
+      span.className   = 'badge badge-muted';
+      span.textContent = tag;
+      tagsWrap.appendChild(span);
+    });
+
+    const price = course.isFree ? 0 : course.price;
+    document.getElementById('summary-subtotal').textContent = course.isFree ? 'Gratis' : formatARS(price);
+    document.getElementById('summary-total').textContent    = course.isFree ? 'Gratis' : formatARS(price);
+
+    if (course.isFree) {
+      document.getElementById('payment-loader').classList.add('hidden');
+      document.getElementById('payment-brick-container').innerHTML = `
+        <div style="text-align:center;padding:2rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);">
+          <p style="margin-bottom:1.5rem;font-size:.9375rem;">Este curso es <strong style="color:var(--success);">gratuito</strong>. Solo confirmá tu inscripción.</p>
+          <button id="enroll-free-btn" class="btn btn-primary btn-lg">Inscribirme gratis</button>
+        </div>`;
+
+      document.getElementById('enroll-free-btn').addEventListener('click', async () => {
+        if (!document.getElementById('terms-check').checked) {
+          showToast('Aceptá los términos para continuar.', 'warning'); return;
+        }
+        const btn = document.getElementById('enroll-free-btn');
+        btn.disabled = true; btn.textContent = 'Procesando...';
+        try {
+          const { createEnrollment, createNotification } = await import('../../assets/js/db.js');
+          await createEnrollment(user.uid, course.courseId, course.teacherId, 0, 'FREE', course.totalModules || 1);
+          await createNotification(user.uid, 'enrollment', '¡Inscripción exitosa!', `Ya podés acceder a "${course.title}".`, course.courseId);
+          showToast('¡Inscripción exitosa!', 'success');
+          setTimeout(() => window.location.href = `../course/course-player.html?id=${course.courseId}`, 1500);
+        } catch (err) {
+          showToast('Error al inscribirse. Intentá de nuevo.', 'error');
+          btn.disabled = false; btn.textContent = 'Inscribirme gratis';
+        }
+      });
+      return;
+    }
+
+    document.getElementById('payment-loader').classList.add('hidden');
+    document.getElementById('payment-brick-container').innerHTML = `
+      <div style="text-align:center;padding:2rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);color:var(--text-muted);font-size:.875rem;">
+        Aceptá los términos para ver las opciones de pago.
+      </div>`;
+
+    document.getElementById('terms-check').addEventListener('change', async (e) => {
+      if (!e.target.checked) {
+        document.getElementById('payment-brick-container').innerHTML = `
+          <div style="text-align:center;padding:2rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);color:var(--text-muted);font-size:.875rem;">
+            Aceptá los términos para ver las opciones de pago.
+          </div>`;
+        return;
+      }
+      document.getElementById('payment-brick-container').innerHTML = `<div style="display:flex;justify-content:center;padding:2rem;"><div class="loader-spinner"></div></div>`;
+      try {
+        const pref = await createPreference('course', {
+          courseTitle: course.title,
+          price:       course.price,
+          courseId:    course.courseId,
+          studentId:   user.uid,
+          teacherId:   course.teacherId
+        });
+        renderCheckoutButton('payment-brick-container', pref.id, pref.init_point);
+      } catch (err) {
+        showToast('Error al conectar con Mercado Pago. Intentá de nuevo.', 'error');
+      }
+    });
+  }
+</script>
+
+<script type="module" src="../../assets/js/app.js"></script>
+<script type="module" src="../../assets/js/spa.js"></script>
+
+</body>
+</html>

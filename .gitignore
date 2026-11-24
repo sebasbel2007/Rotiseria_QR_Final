@@ -1,0 +1,24 @@
+# Dependencias y binarios
+node_modules/
+ngrok.exe
+
+# Secretos (NUNCA subir)
+.env
+**/.env
+serviceAccountKey.json
+serviceAccountKey*.json
+*adminsdk*.json
+cuentas-test.json
+
+# Backups / material viejo (no suben al repo)
+respaldo/
+respaldo-cliente/
+relleno/.amazonq/
+relleno/documentacion/
+
+# Logs y basura de sistema
+*.log
+server.log
+server-err.log
+.DS_Store
+Thumbs.db

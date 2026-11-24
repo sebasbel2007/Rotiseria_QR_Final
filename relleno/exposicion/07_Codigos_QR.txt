@@ -1,0 +1,100 @@
+GUÍA DE EXPOSICIÓN: CÓDIGOS QR EN ROTISERÍA SYM
+================================================================================
+
+FECHA: 2026-09-03
+VERSIÓN: v12.4
+AUTOR: Documentación técnica del sistema
+
+--------------------------------------------------------------------------------
+1. ¿QUÉ ES UN CÓDIGO QR Y PARA QUÉ SIRVE EN NUESTRO SISTEMA?
+--------------------------------------------------------------------------------
+
+Un código QR (Quick Response) es un código de barras bidimensional que almacena
+información legible al instante desde la cámara de un celular.
+
+EN LA ROTISERÍA:
+- Cada mesa tiene su QR único impreso y pegado en la mesa
+- Al escanearlo → abre la PWA en el navegador del cliente
+- La URL incluye `?mesa=N` → el sistema sabe qué mesa pidió
+- Sin apps, sin login, sin registro: escanea → pide → come
+
+EJEMPLO URL QR MESA 3:
+https://jokingly-guru-outing.ngrok-free.app/?mesa=3
+
+--------------------------------------------------------------------------------
+2. ¿CÓMO SE GENERAN LOS QR EN NUESTRA APLICACIÓN WEB?
+--------------------------------------------------------------------------------
+
+USAMOS: **librería `qrcode` de npm** (Node.js, backend)
+
+NO ES:
+- Una extensión de navegador
+- Un servicio externo de pago
+- Código manual complicado
+
+INSTALACIÓN (ya está en package.json):
+> npm install qrcode
+
+EN server.js (generación dinámica PNG):
+
+```javascript
+const QRCode = require('qrcode');
+
+// Endpoint: GET /qr/:mesa.png
+app.get('/qr/:mesa.png', async (req, res) => {
+  const mesa = req.params.mesa;
+  const url = `https://TU_NGROK_URL/?mesa=${mesa}`;
+
+  try {
+    // Genera PNG en memoria (buffer)
+    const pngBuffer = await QRCode.toBuffer(url, {
+      type: 'image/png',
+      width: 300,
+      margin: 2,
+      color: { dark: '#000000', light: '#FFFFFF' }
+    });
+
+    res.set('Content-Type', 'image/png');
+    res.send(pngBuffer);
+  } catch (err) {
+    res.status(500).send('Error generando QR');
+  }
+});
+```
+
+TAMBIÉN HAY ENDPOINT INFO (lista todas las mesas):
+> GET /qr/info → Devuelve JSON con URLs de todas las mesas
+
+--------------------------------------------------------------------------------
+3. QUÉ GENERA EL ADMIN (FLUJO PRÁCTICO)
+--------------------------------------------------------------------------------
+
+EL ADMIN NO GENERA QR MANUALMENTE UNO A UNO.
+
+FLUJO AUTOMÁTICO:
+1. Admin configura mesas en Firestore (colección `mesas`, campo `activa: true`)
+2. Al levantar servidor + ngrok → las URLs ya funcionan
+3. Admin abre: `https://TU_NGROK_URL/qr/info`
+4. Ve lista: Mesa 1 → URL, Mesa 2 → URL, Mesa 3 → URL...
+5. Admin imprime `/qr/1.png`, `/qr/2.png`, `/qr/3.png` (clic derecho → guardar imagen)
+6. Pega en mesas físicas
+
+SI AGREGA MESA NUEVA:
+- Crea doc en Firestore `mesas/{numero}` con `activa: true`
+- Accede a `/qr/{nuevo}.png` → ya existe, la imprime y listo
+
+--------------------------------------------------------------------------------
+4. RESUMEN PARA EXPOSICIÓN (3 PUNTOS CLAVE)
+--------------------------------------------------------------------------------
+
+1. "QR = link físico a la mesa. Cliente escanea → entra a la app con su mesa asignada."
+
+2. "Se generan EN TIEMPO REAL desde el backend con `npm install qrcode` 
+   (librería `qrcode` en server.js). No hace falta extensión ni servicio externo."
+
+3. "Admin solo imprime: entra a `/qr/info`, ve todas las URLs, descarga las 
+   imágenes PNG (`/qr/1.png`, `/qr/2.png`...) y las pega en las mesas."
+
+================================================================================
+FIN DE DOCUMENTO 07_Codigos_QR.txt
+================================================================================

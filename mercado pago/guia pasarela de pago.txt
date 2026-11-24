@@ -1,0 +1,309 @@
+GUÍA TÉCNICA: Pasarela de Pago con MercadoPago (Checkout Pro)
+Arquitectura del Sistema
+┌─────────────────────────────────────────────────────────┐
+│                     FRONTEND (Browser)                  │
+│                                                         │
+│  checkout.html ──► createPreference() ──► POST /api/    │
+│       ▲                                      create-     │
+│       │                                      preference  │
+│       │                                           │      │
+│  checkout-result.html ◄── MP Redirect ◄──────────┘      │
+│       │                                                  │
+│       └──► processPayment() ──► Firestore                │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│                BACKEND (Node.js + Express)               │
+│                                                         │
+│  POST /api/create-preference ──► MP SDK ──► Returns     │
+│       { id, init_point, sandbox_init_point }            │
+│                                                         │
+│  POST /api/webhook ◄── MP Notifications                 │
+│       └── Validates HMAC signature                      │
+│       └── Fetches payment details                       │
+└─────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│              MERCADOPAGO (Hosted Checkout)               │
+│                                                         │
+│  User pays on MP's secure page                          │
+│  MP redirects back to checkout-result.html              │
+└─────────────────────────────────────────────────────────┘
+Flujo de Datos Completo
+1. Crear Preferencia (Frontend → Backend → MP)
+Frontend                          Backend                         MP
+   │                                │                              │
+   │  POST /api/create-preference   │                              │
+   │  { type, price, metadata }     │                              │
+   │  ─────────────────────────────►│                              │
+   │                                │  preferenceClient.create()   │
+   │                                │  ───────────────────────────►│
+   │                                │  ◄── { id, init_point }      │
+   │  ◄── { id, init_point }        │                              │
+   │                                │                              │
+   │  User clicks "Pagar con MP"    │                              │
+   │  ────────────────────────────────────────────────────────────►│
+   │                                │                              │
+   │  ◄── Redirect back with status, payment_id, etc.              │
+2. Procesar Resultado (MP → Frontend → Firestore)
+MP Redirect → checkout-result.html
+                │
+                ├─ status === 'approved'?
+                │   ├─ type === 'membership'?
+                │   │   └── processMembershipPayment()
+                │   │       ├── upgradeToTeacher(userId)
+                │   │       ├── createTransaction({ type: 'membership', ... })
+                │   │       └── createNotification(welcome)
+                │   │
+                │   └─ type === 'course'?
+                │       └── processCoursePayment()
+                │           ├── createEnrollment(student, course, price, paymentId)
+                │           ├── createTransaction({ type: 'course_purchase', ... })
+                │           │   ├── platformAmount = price * 0.30
+                │           │   └── teacherAmount  = price * 0.70
+                │           ├── createNotification(student, 'enrollment')
+                │           └── createNotification(teacher, 'sale')
+                │
+                ├─ status === 'pending'? → Show pending message
+                └─ status === 'failure'? → Show error message
+Archivos que Necesitás y Qué Contienen
+Backend (Node.js + Express)
+server.js — El servidor que habla con MercadoPago:
+
+// Inicialización del cliente MP
+const mpClient = new MercadoPagoConfig({
+  accessToken: process.env.MP_ACCESS_TOKEN
+});
+const preferenceClient = new Preference(mpClient);
+const paymentClient    = new Payment(mpClient);
+
+// Endpoint: Crear preferencia de pago
+app.post('/api/create-preference', async (req, res) => {
+  const { type, userId, courseTitle, price, courseId, studentId, teacherId } = req.body;
+  
+  const BASE_URL = `${process.env.APP_URL}/pages/checkout/checkout-result.html`;
+  
+  // Construir body según tipo de pago
+  if (type === 'membership') {
+    body = {
+      items: [{ title: 'Membresía Profesor', quantity: 1, unit_price: 20000, currency_id: 'ARS' }],
+      back_urls: {
+        success: `${BASE_URL}?type=membership&userId=${userId}&status=approved`,
+        failure: `${BASE_URL}?type=membership&status=failure`,
+        pending: `${BASE_URL}?type=membership&status=pending`
+      },
+      auto_return: 'approved',
+      metadata: { type: 'membership', userId }
+    };
+  } else if (type === 'course') {
+    body = {
+      items: [{ title: courseTitle, quantity: 1, unit_price: price, currency_id: 'ARS' }],
+      back_urls: {
+        success: `${BASE_URL}?type=course&courseId=${courseId}&studentId=${studentId}&teacherId=${teacherId}&price=${price}&status=approved`,
+        failure: `${BASE_URL}?type=course&courseId=${courseId}&status=failure`,
+        pending: `${BASE_URL}?type=course&courseId=${courseId}&status=pending`
+      },
+      auto_return: 'approved',
+      metadata: { type: 'course', courseId, studentId, teacherId, price }
+    };
+  }
+  
+  const preference = await preferenceClient.create({ body });
+  res.json({ id: preference.id, init_point: preference.init_point, sandbox_init_point: preference.sandbox_init_point });
+});
+
+// Endpoint: Webhook de MP
+app.post('/api/webhook', async (req, res) => {
+  // Validar firma HMAC-SHA256
+  const xSignature = req.headers['x-signature'];
+  const xRequestId = req.headers['x-request-id'];
+  
+  if (xSignature && xRequestId && process.env.MP_WEBHOOK_SECRET) {
+    const [tsPart, v1Part] = xSignature.split(',');
+    const ts = tsPart?.split('=')[1];
+    const v1 = v1Part?.split('=')[1];
+    const manifest = `id:${data?.id};request-id:${xRequestId};ts:${ts};`;
+    const expected = crypto.createHmac('sha256', process.env.MP_WEBHOOK_SECRET)
+      .update(manifest).digest('hex');
+    if (expected !== v1) return res.sendStatus(401);
+  }
+  
+  res.sendStatus(200); // Responder rápido a MP
+  
+  if (type === 'payment' && data?.id) {
+    const payment = await paymentClient.get({ id: data.id });
+    console.log(`Pago ${payment.id} — status: ${payment.status}`);
+  }
+});
+Frontend (HTML + JS)
+payments.js — Lógica de pago del lado del cliente:
+
+// Constantes de comisión
+const PLATFORM_COMMISSION = 0.30;
+const TEACHER_SHARE       = 0.70;
+const MEMBERSHIP_PRICE    = 20000; // ARS
+
+// Crear preferencia via servidor
+export async function createPreference(type, data) {
+  const res = await fetch('/api/create-preference', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, ...data })
+  });
+  if (!res.ok) throw new Error('No se pudo crear la preferencia de pago.');
+  return res.json();
+}
+
+// Procesar pago aprobado de membresía
+export async function processMembershipPayment(userId, paymentId) {
+  await upgradeToTeacher(userId);
+  await createTransaction({
+    type: 'membership', studentId: userId, teacherId: null, courseId: null,
+    amount: MEMBERSHIP_PRICE, platformAmount: MEMBERSHIP_PRICE, teacherAmount: 0,
+    paymentId, status: 'completed'
+  });
+  await createNotification(userId, 'enrollment', '¡Bienvenido, Profesor!', 'Tu membresía fue activada.');
+}
+
+// Procesar pago aprobado de curso
+export async function processCoursePayment(studentId, courseId, teacherId, price, paymentId, totalModules) {
+  const platformAmount = Math.round(price * PLATFORM_COMMISSION);
+  const teacherAmount  = Math.round(price * TEACHER_SHARE);
+  
+  await createEnrollment(studentId, courseId, teacherId, price, paymentId, totalModules);
+  await createTransaction({
+    type: 'course_purchase', studentId, teacherId, courseId,
+    amount: price, platformAmount, teacherAmount, paymentId, status: 'completed'
+  });
+  await createNotification(studentId, 'enrollment', '¡Compra exitosa!', 'Ya podés acceder al curso.');
+  await createNotification(teacherId, 'sale', 'Nueva venta', `Ganaste $${teacherAmount} ARS.`);
+}
+
+// Renderizar botón de Checkout Pro
+export async function renderCheckoutButton(containerId, preferenceId, initPoint) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = `
+    <a href="${initPoint}" style="...estilos...">
+      Pagar con Mercado Pago
+    </a>`;
+}
+checkout.html — Página de checkout:
+
+// Detectar tipo de pago desde URL
+const params = new URLSearchParams(window.location.search);
+const type = params.get('type'); // 'membership' o 'course'
+const courseId = params.get('courseId');
+
+// Para membresía:
+const pref = await createPreference('membership', { userId: user.uid });
+renderCheckoutButton('payment-brick-container', pref.id, pref.init_point);
+
+// Para curso (después de aceptar términos):
+const pref = await createPreference('course', {
+  courseTitle: course.title, price: course.price,
+  courseId: course.courseId, studentId: user.uid, teacherId: course.teacherId
+});
+renderCheckoutButton('payment-brick-container', pref.id, pref.init_point);
+checkout-result.html — Callback después del pago:
+
+const status = params.get('status');
+const paymentId = params.get('payment_id') || 'sandbox';
+
+if (status === 'approved') {
+  if (type === 'membership') {
+    await processMembershipPayment(user.uid, paymentId);
+    // Redirect al dashboard de profesor
+  } else if (type === 'course') {
+    await processCoursePayment(user.uid, courseId, teacherId, price, paymentId, totalMods);
+    // Redirect al reproductor del curso
+  }
+} else if (status === 'pending') {
+  // Mostrar mensaje de pago pendiente
+} else {
+  // Mostrar error
+}
+Base de Datos (Firestore)
+Colección transactions:
+
+{
+  type: 'course_purchase' | 'membership' | 'refund',
+  studentId: 'uid_del_estudiante',
+  teacherId: 'uid_del_profesor' | null,
+  courseId: 'id_del_curso' | null,
+  amount: 10000,           // Monto total en ARS
+  platformAmount: 3000,    // 30% para la plataforma
+  teacherAmount: 7000,     // 70% para el profesor
+  paymentId: 'id_de_mp',   // ID del pago en MercadoPago
+  status: 'pending' | 'approved' | 'refunded' | 'disputed',
+  createdAt: Timestamp,
+  updatedAt: Timestamp
+}
+Colección enrollments:
+
+{
+  studentId: 'uid_del_estudiante',
+  courseId: 'id_del_curso',
+  teacherId: 'uid_del_profesor',
+  enrolledAt: Timestamp,
+  pricePaid: 10000,
+  paymentId: 'id_de_mp',
+  completedModules: [],
+  progressPercent: 0,
+  refundEligible: true,    // true si progress < 50%
+  refundRequested: false
+}
+Colección users:
+
+{
+  role: 'student' | 'teacher' | 'admin',
+  membershipStatus: 'none' | 'active',  // Solo para teachers
+  membershipPaidAt: Timestamp | null,
+  // ... otros campos
+}
+Variables de Entorno (.env)
+# Mercado Pago
+MP_ACCESS_TOKEN=APP_USR-tu-access-token-aqui
+MP_PUBLIC_KEY=APP_USR-tu-public-key-aqui
+MP_WEBHOOK_SECRET=tu-webhook-secret-aqui
+
+# URL de tu app (para callbacks de MP)
+APP_URL=https://tu-dominio.com
+
+# Comisión de la plataforma
+PLATFORM_COMMISSION=0.30
+TEACHER_MEMBERSHIP_PRICE_ARS=20000
+Dependencias (package.json)
+{
+  "dependencies": {
+    "mercadopago": "^2.13.0",
+    "express": "^4.22.2",
+    "dotenv": "^16.6.1",
+    "cors": "^2.8.6",
+    "firebase-admin": "^14.2.0"
+  }
+}
+Checklist para tu Nueva App
+Crear cuenta en MercadoPago Developer
+Ir a https://www.mercadopago.com.ar/developers
+Crear una nueva aplicación
+Obtener MP_ACCESS_TOKEN y MP_PUBLIC_KEY del panel
+Configurar Webhook en MP Dashboard
+URL: https://tu-dominio.com/api/webhook
+Eventos: payment
+Copiar estos archivos a tu nueva app:
+server.js (adaptar endpoints según tu lógica)
+payments.js (adaptar funciones de procesamiento)
+checkout.html (adaptar UI a tu diseño)
+checkout-result.html (adaptar mensajes y redirects)
+.env.example → .env (con tus nuevas credenciales)
+package.json (copiar dependencias)
+Adaptar la lógica de negocio:
+Cambiar PLATFORM_COMMISSION y TEACHER_SHARE según tu modelo
+Cambiar MEMBERSHIP_PRICE o eliminar si no usás membresías
+Adaptar las funciones processMembershipPayment() y processCoursePayment() a tu lógica
+Probar en Sandbox:
+Usar las credenciales de sandbox de MP
+Probar pagos con tarjetas de prueba de MP
+Verificar que los webhooks llegan correctamente

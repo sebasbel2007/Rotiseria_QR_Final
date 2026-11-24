@@ -1,0 +1,28 @@
+{
+  "name": "rotiseria-sym",
+  "version": "1.0.0",
+  "description": "Rotisería SYM - App de rotisería con sistema QR, delivery y más",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "dev:ngrok": "node server.js --ngrok",
+    "test-db": "node create-indexes.js test",
+    "seed": "node create-indexes.js seed-all"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.0",
+    "firebase-admin": "^14.3.0",
+    "mercadopago": "^3.6.0",
+    "qrcode": "^1.5.3"
+  },
+  "keywords": [
+    "rotiseria",
+    "qr",
+    "delivery",
+    "pwa"
+  ],
+  "license": "ISC"
+}

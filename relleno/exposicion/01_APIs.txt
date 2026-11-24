@@ -1,0 +1,314 @@
+================================================================================
+GUÍA DE EXPOSICIÓN: APIs EN EL SISTEMA ROTISERÍA SYM
+================================================================================
+
+FECHA: 2026-09-03
+VERSIÓN: v12.4
+AUTOR: Documentación técnica del sistema
+
+--------------------------------------------------------------------------------
+1. ¿QUÉ ES UNA API?
+--------------------------------------------------------------------------------
+Una API (Application Programming Interface) es un conjunto de reglas y definiciones
+que permite que dos sistemas de software se comuniquen entre sí como un puente,
+sin importar cómo estén programados por dentro.
+
+En términos simples: es el "contrato" que define CÓMO un sistema puede pedirle
+cosas a otro sistema y QUÉ respuesta va a recibir.
+
+--------------------------------------------------------------------------------
+2. ¿PARA QUÉ FUNCIONA UNA API EN NUESTRO SISTEMA?
+--------------------------------------------------------------------------------
+Sirve para conectar el FRONTEND (lo que ve el cliente en el navegador/PWA)
+con el BACKEND (la base de datos Firestore + servidor Node.js + servicios externos)
+y para integrar servicios externos sin rehacer la rueda.
+
+Ejemplos concretos en Rotisería SYM:
+- Frontend pide menú de platos → Backend devuelve JSON con productos
+- Mesa envía pedido nuevo → Backend guarda en Firestore + notifica a cocina en tiempo real
+- Cliente paga con MercadoPago → Frontend llama a API MP → Recibe link de pago
+- Webhook de MercadoPago → Backend recibe confirmación → Marca pedido como "Pagado"
+
+--------------------------------------------------------------------------------
+3. ¿CÓMO UTILIZAR UNA API? (FLUJO GENERAL)
+--------------------------------------------------------------------------------
+PASO 1 - PETICIÓN (Request):
+  El cliente (frontend) hace una consulta HTTP a un endpoint específico:
+  - GET: para leer/consultar datos
+  - POST: para crear/enviar datos nuevos
+  - PUT/PATCH: para actualizar datos existentes
+  - DELETE: para borrar datos
+
+PASO 2 - AUTENTICACIÓN:
+  Se envía credenciales para validar quién pide:
+  - Firebase Auth: token JWT en headers (usuarios logueados)
+  - API Keys: para servicios externos (MercadoPago)
+  - Sin auth: para rutas públicas (QR mesa, catálogo)
+
+PASO 3 - PROCESAMIENTO EN SERVIDOR:
+  El backend valida, procesa, consulta base de datos, aplica lógica de negocio
+
+PASO 4 - RESPUESTA (Response):
+  El servidor devuelve:
+  - Status code: 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 500 Error
+  - Body: generalmente JSON con los datos solicitados o confirmación
+
+--------------------------------------------------------------------------------
+4. MÉTODOS HTTP UTILIZADOS EN ROTISERÍA SYM
+--------------------------------------------------------------------------------
+
+┌─────────────┬────────────────────────────────────────────────────────────────┐
+│ MÉTODO      │ USO EN NUESTRO SISTEMA                                         │
+├─────────────┼────────────────────────────────────────────────────────────────┤
+│ GET         │ Consultar catálogo de productos, mesas activas,                │
+│             │ estado de pedido, historial de cocina, datos de usuario       │
+├─────────────┼────────────────────────────────────────────────────────────────┤
+│ POST        │ Crear pedido nuevo, crear preferencia MP,                     │
+│             │ webhook MP, login, registro de usuario                        │
+├─────────────┼────────────────────────────────────────────────────────────────┤
+│ PUT/PATCH   │ Actualizar estado cocina (Pendiente→En Preparación→Listo),    │
+│             │ marcar entregado_mozo, actualizar método de pago,             │
+│             │ check-in en caja, cancelar pedido                             │
+├─────────────┼────────────────────────────────────────────────────────────────┤
+│ DELETE      │ (No usado directamente; se usa "cancelado" soft delete)       │
+└─────────────┴────────────────────────────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+5. ENDPOINTS REALES DEL SISTEMA (server.js)
+--------------------------------------------------------------------------------
+
+BASE URL: https://jokingly-guru-outing.ngrok-free.dev  (producción ngrok)
+          http://localhost:4000                        (desarrollo local)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ENDPOINTS PÚBLICOS (sin autenticación)                                      │
+├──────────────────────┬──────────┬───────────────────────────────────────────┤
+│ /qr/:mesa.png        │ GET      │ Genera imagen QR PNG para mesa específica │
+│ /qr/info             │ GET      │ Lista URLs de QR de todas las mesas       │
+│ /qr-mp-redirect      │ GET      │ Redirect a checkout MP de una mesa        │
+│ /?mesa=N             │ GET      │ SPA - carga app cliente para mesa N       │
+└──────────────────────┴──────────┴───────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ENDPOINTS MERCADOPAGO                                                       │
+├──────────────────────┬──────────┬───────────────────────────────────────────┤
+│ /api/create-preference        │ POST  │ Crea preferencia MP (items, urls)   │
+│ /api/mp-preference-for-mesa   │ POST  │ Pref. consolidada TODOS pedidos mesa│
+│ /api/mp-preference-for-pedido │ POST  │ Pref. INDIVIDUAL por pedido (v12.4) │
+│ /api/webhook                  │ POST  │ Webhook MP (firma HMAC SHA256)      │
+└──────────────────────┴──────────┴───────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ENDPOINTS FIRESTORE (vía Firebase SDK en cliente, NO REST directo)          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Colección: pedidos                                                          │
+│   - createPedido()              → POST   (add doc)                          │
+│   - escucharPedido(id)          → GET    (onSnapshot realtime)              │
+│   - escucharPedidosCocina()     → GET    (query estado_cocina in [...])     │
+│   - escucharPedidosMesa(id)     → GET    (query mesa_id + orden)            │
+│   - actualizarEstadoCocina()    → PATCH  (update doc)                       │
+│   - actualizarMetodoPago()      → PATCH  (update metodo_pago + estado_pago) │
+│   - marcarEntregadoMozo()       → PATCH  (update entregado_mozo: true)      │
+│   - marcarComoPagado()          → PATCH  (update estado_pago: 'Pagado')     │
+│   - cancelarPedido()            → PATCH  (update estado_cocina: 'Cancelado')│
+│   - marcarMesaPagado()          → PATCH  (batch update múltiples pedidos)   │
+│                                                                             │
+│ Colección: mesas                                                            │
+│   - validar mesa activa           → GET    (where activa == true)           │
+│   - actualizar scan_session       → PATCH  (lock anti-doble-escaneo)        │
+│                                                                             │
+│ Colección: config                                                           │
+│   - categorias (onSnapshot)       → GET    (lista visible + iconos)         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+6. EJEMPLOS REALES DE PETICIONES/RESPUESTAS
+--------------------------------------------------------------------------------
+
+--- EJEMPLO 1: CREAR PEDIDO DESDE MESA (POST lógico vía Firebase SDK) ---
+Request (en cliente.js → enviarPedidoMesa()):
+{
+  cliente_uid: "mesa:3",
+  nombre_cliente: "Juan Pérez",
+  tipo_consumo: "Comer en el local",
+  mesa_id: "3",
+  zona: null,
+  items: [
+    { producto_id: "prod_123", nombre: "Milanesas a la Napolitana",
+      variante: null, precio_unitario: 3000, cantidad: 1,
+      subtotal: 3000, notas: "Sin aceitunas" }
+  ],
+  total: 3000,
+  notas_cliente: "Mesa cerca de la ventana",
+  estado_cocina: "Pendiente confirma caja",
+  estado_pago: "Pendiente verificacion MP",  // o "Pendiente" si Efectivo
+  metodo_pago: "MercadoPago",                 // o "Efectivo"
+  recargo_delivery: 0,
+  entregado: false,
+  entregado_mozo: false
+}
+
+Response: { id: "auto_generated_doc_id" }  (Firestore devuelve ID del documento)
+
+--- EJEMPLO 2: CREAR PREFERENCIA MERCADOPAGO INDIVIDUAL (POST /api/mp-preference-for-pedido) ---
+Request:
+POST /api/mp-preference-for-pedido
+Content-Type: application/json
+{ "pedido_id": "abc123xyz" }
+
+Response (200 OK):
+{
+  "id": "123456789-abcdef",
+  "init_point": "https://www.mercadopago.com.ar/checkout/v1/redirect/pref/...",
+  "sandbox_init_point": "https://sandbox.mercadopago.com.ar/checkout/v1/..."
+}
+
+Frontend hace: window.location.href = data.init_point  (redirect a MP)
+
+--- EJEMPLO 3: WEBHOOK MERCADOPAGO (POST /api/webhook) ---
+Request (desde servidores MP):
+Headers: x-signature: "ts=1234567890,v1=hmac_sha256_hash"
+Body (raw JSON):
+{
+  "type": "payment",
+  "data": { "id": "987654321" }
+}
+
+Procesamiento en server.js:
+1. Valida firma HMAC con MP_WEBHOOK_SECRET
+2. Llama a paymentClient.get({ id: data.id })
+3. Si payment.status === 'approved' y external_reference existe:
+   - Parsea external_reference (array de pedido_ids)
+   - Batch update: estado_pago='Pagado', metodo_pago='MercadoPago',
+     mp_payment_id, mp_status, fecha_cobro=serverTimestamp()
+
+Response: 200 OK (siempre, para que MP no reintente)
+
+--- EJEMPLO 4: ACTUALIZAR ESTADO COCINA (PATCH lógico vía Firebase SDK) ---
+Request (en cocina.js → avanzarEstadoCocina()):
+actualizarEstadoCocina("pedido_id_abc", "Listo para Retirar/Comer")
+
+Firestore update:
+{ estado_cocina: "Listo para Retirar/Comer" }
+
+--- EJEMPLO 5: MARCAR ENTREGADO POR MOZO (PATCH lógico vía Firebase SDK) ---
+Request (en cocina.js → marcarEntregadoMozo()):
+db.collection('pedidos').doc(id).update({ entregado_mozo: true })
+
+Firestore update:
+{ entregado_mozo: true }
+
+--- EJEMPLO 4: QUERY PEDIDOS ACTIVOS MESA (GET lógico vía Firebase SDK) ---
+En router.js → _setupMesaMode(3):
+db.collection('pedidos')
+  .where('mesa_id', '==', '3')
+  .where('entregado_mozo', '==', false)
+  .where('estado_cocina', 'not-in', ['Cancelado', 'Entregado'])
+  .limit(1)
+  .get()
+
+Requiere índice compuesto: mesa_id ASC + entregado_mozo ASC + estado_cocina ASC
+
+--------------------------------------------------------------------------------
+7. AUTENTICACIÓN Y SEGURIDAD
+--------------------------------------------------------------------------------
+
+FIREBASE AUTH (Usuarios internos: cocina, cajero, admin):
+- Login: email/password → Firebase Auth → token JWT
+- Token se adjunta automáticamente en requests Firebase SDK
+- Reglas Firestore validan: request.auth.uid, request.auth.token.rol
+
+RUTAS PÚBLICAS (QR Mesa):
+- Sin auth: cualquiera con link ?mesa=N accede
+- Validación: mesa debe existir y estar activa
+- Lock anti-doble-escaneo: scan_session_id en doc mesa (5 min timeout)
+
+MERCADOPAGO:
+- Access Token: MP_ACCESS_TOKEN (env) → para crear preferencias
+- Webhook Secret: MP_WEBHOOK_SECRET (env) → validar firma HMAC
+- Sandbox/Producción: controlado por credenciales usadas
+
+REGLAS FIRESTORE CLAVE (firestore.rules):
+- allow create: if isMesaRequest() → mesas anónimas pueden crear pedidos
+- allow read: if isOwner() || hasRole(['cocina','cajero','admin'])
+- allow update: if isCajeroCobro() → solo campos de pago
+- allow list: if hasRole(['cocina','cajero','admin','tv'])
+
+--------------------------------------------------------------------------------
+8. MANEJO DE ERRORES COMUNES
+--------------------------------------------------------------------------------
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ERROR                    │ CAUSA                      │ SOLUCIÓN            │
+├──────────────────────────┼────────────────────────────┼─────────────────────┤
+│ 400 Bad Request          │ JSON inválido, campos      │ Validar en cliente  │
+│                          │ requeridos faltantes       │ y servidor          │
+├──────────────────────────┼────────────────────────────┼─────────────────────┤
+│ 401 Unauthorized         │ Token expirado / no auth   │ Re-login / refresh  │
+├──────────────────────────┼────────────────────────────┼─────────────────────┤
+│ 403 Forbidden            │ Rol sin permisos           │ Verificar reglas    │
+├──────────────────────────┼────────────────────────────┼─────────────────────┤
+│ 404 Not Found            │ Documento no existe        │ Verificar IDs       │
+├──────────────────────────┼────────────────────────────┼─────────────────────┤
+│ 500 Internal Server      │ Error no controlado        │ Logs + try/catch    │
+├──────────────────────────┼────────────────────────────┼─────────────────────┤
+│ failed-precondition      │ Falta índice Firestore     │ Crear en Console    │
+│ (query requires index)   │ compuesto                  │ (ver índices abajo) │
+├──────────────────────────┼────────────────────────────┼─────────────────────┤
+│ permission-denied        │ Reglas Firestore bloquean  │ Ajustar rules       │
+└──────────────────────────┴────────────────────────────┴─────────────────────┘
+
+--------------------------------------------------------------------------------
+9. ÍNDICES FIRESTORE REQUERIDOS (Estado: HABILITADOS)
+--------------------------------------------------------------------------------
+Colección: pedidos
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ mesa_id (ASC) + entregado_mozo (ASC) + estado_cocina (ASC)  ← CRÍTICO v12.4 │
+│   Usado en: router.js _setupMesaMode() query con not-in                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ estado_cocina (ASC) + mesa_id (ASC) + fecha_hora_creacion (DESC)           │
+│   Usado en: cocina.js escucharPedidosCocina()                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ mesa_id (ASC) + fecha_hora_creacion (ASC)                                  │
+│   Usado en: cliente.js escucharPedidosMesa()                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ estado_pago (ASC) + mesa_id (ASC)                                          │
+│   Usado en: pedidos.js obtenerPedidosNoPagadosMesa()                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ entregado_mozo (ASC) + fecha_listo (DESC)                                  │
+│   Usado en: TV / historial                                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+10. ARQUITECTURA DE COMUNICACIÓN RESUMIDA
+--------------------------------------------------------------------------------
+
+┌──────────────────┐     HTTP/REST      ┌──────────────────┐
+│   FRONTEND       │ ◄─────────────────► │   BACKEND        │
+│  (Navegador/PWA) │                    │  (Node.js +      │
+│                  │  GET /qr/3.png     │   Express)       │
+│  - HTML/CSS/JS   │  POST /api/mp...   │                  │
+│  - Firebase SDK  │  POST /api/webhook │  - server.js     │
+│  - Service Worker│                    │  - Firebase Admin│
+└────────┬─────────┘                    └────────┬─────────┘
+         │                                       │
+         │ Firebase SDK (WebSocket/long-polling) │
+         ▼                                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    FIRESTORE (Base de datos)                    │
+│  - pedidos, mesas, usuarios, config, productos                 │
+│  - Realtime listeners (onSnapshot) para cocina, cliente, TV    │
+│  - Reglas de seguridad por rol y ownership                     │
+└─────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    MERCADOPAGO (Externo)                        │
+│  - API Preferences (crear checkout)                            │
+│  - Webhook (notificación pago aprobado/rechazado)              │
+│  - Sandbox para testing / Producción para real                 │
+└─────────────────────────────────────────────────────────────────┘
+
+================================================================================
+FIN DE DOCUMENTO 01_APIs.txt
+================================================================================

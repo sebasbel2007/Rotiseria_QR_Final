@@ -1,0 +1,47 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "mesas",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "zona", "order": "ASCENDING" },
+        { "fieldPath": "activa", "order": "ASCENDING" },
+        { "fieldPath": "numero", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mesa_id", "order": "ASCENDING" },
+        { "fieldPath": "fecha_hora_creacion", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado_cocina", "order": "ASCENDING" },
+        { "fieldPath": "mesa_id", "order": "ASCENDING" },
+        { "fieldPath": "fecha_hora_creacion", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "entregado_mozo", "order": "ASCENDING" },
+        { "fieldPath": "fecha_listo", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pedidos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "estado_pago", "order": "ASCENDING" },
+        { "fieldPath": "mesa_id", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

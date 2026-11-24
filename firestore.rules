@@ -1,0 +1,150 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ────────────────────────────────────────────────
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol;
+    }
+
+    function hasRole(rol) {
+      return isAuth() && getRole() == rol;
+    }
+
+    function hasAnyRole(roles) {
+      return isAuth() && getRole() in roles;
+    }
+
+    // Pedido de mesa: `cliente_uid` empieza con "mesa:".
+    // Funciona estando anónimo O logueado (así un cliente con sesión vieja
+    // también puede pedir desde la mesa).
+    function isMesaRequest() {
+      return request.resource.data.cliente_uid is string &&
+             request.resource.data.cliente_uid.matches('mesa:.*');
+    }
+
+    // Pedido de mesa ya existente (para read/list/update)
+    function esPedidoMesa() {
+      return resource.data.cliente_uid is string &&
+             resource.data.cliente_uid.matches('mesa:.*');
+    }
+
+    // Campos que cocina puede modificar en un pedido activo
+    function soloEstadoCocina() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['estado_cocina', 'motivo_cancelacion', 'fecha_listo']);
+    }
+
+    // Campos que cocina puede modificar para marcar entregado mozo
+    function soloEntregadoMozo() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['entregado_mozo', 'mozo_uid', 'fecha_entrega_mozo']);
+    }
+
+    // Campos de cancelación: exige cancelado_por y motivo presentes
+    function esCancelacionValida() {
+      return request.resource.data.estado_cocina == 'Cancelado' &&
+             request.resource.data.cancelado_por is string &&
+             request.resource.data.cancelado_por.size() > 0 &&
+             request.resource.data.motivo_cancelacion is string &&
+             request.resource.data.motivo_cancelacion.size() > 0;
+    }
+
+    // Campos de cobro que cajero/admin pueden escribir
+    function soloFieldsCobro() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['estado_pago', 'metodo_pago', 'monto_recibido', 'vuelto',
+                  'cobrado_por', 'fecha_cobro', 'entregado', 'estado_cocina',
+                  'motivo_cancelacion']);
+    }
+
+    // ── users ──────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isAuth() &&
+        (request.auth.uid == userId || hasRole('admin'));
+      allow create: if isAuth() && request.auth.uid == userId;
+      allow update, delete: if hasRole('admin');
+    }
+
+    // ── productos ──────────────────────────────────────────────
+    // Lectura pública (anónimos de mesa necesitan ver el menú)
+    match /productos/{productoId} {
+      allow read:  if true;
+      allow write: if hasRole('admin');
+    }
+
+    // ── mesas ──────────────────────────────────────────────────
+    // Lectura pública (anónimos de mesa necesitan verificar que la mesa existe)
+    match /mesas/{mesaId} {
+      allow read:   if true;
+      allow create: if hasRole('admin');
+      allow update: if hasAnyRole(['admin', 'cajero']) ||
+                     // Anónimos de mesa solo pueden escribir campos de sesión
+                     (request.auth == null &&
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['scan_session_id', 'scan_at']));
+      allow delete: if hasRole('admin');
+    }
+
+    // ── pedidos ────────────────────────────────────────────────
+    match /pedidos/{pedidoId} {
+
+      // Create: usuario autenticado propio, cajero/admin, o mesa anónima
+      allow create: if
+        (isAuth() && request.resource.data.cliente_uid == request.auth.uid) ||
+        hasAnyRole(['cajero', 'admin']) ||
+        isMesaRequest();
+
+      // Read: dueño del pedido, pedido de mesa (cliente_uid "mesa:*"), o staff
+      allow read: if
+        (isAuth() && resource.data.cliente_uid == request.auth.uid) ||
+        esPedidoMesa() ||
+        hasAnyRole(['cocina', 'cajero', 'admin', 'tv']);
+
+      // List: staff para dashboards (queries con where/in) y pedidos de mesa.
+      // El cliente consulta SIEMPRE con `where('cliente_uid','==','mesa:N')`,
+      // que es lo que Firestore necesita para demostrar que la query está
+      // acotada (si la query no filtra cliente_uid, esta regla la rechaza).
+      allow list: if hasAnyRole(['cajero', 'admin']) || esPedidoMesa();
+
+      // Update: separado por rol para mínimo privilegio
+      allow update: if
+        // Admin: todo
+        hasRole('admin') ||
+
+        // Cajero: campos de cobro + cancelación válida
+        (hasRole('cajero') && (
+          soloFieldsCobro() ||
+          esCancelacionValida()
+        )) ||
+
+        // Cocina: avanzar estado O marcar entregado mozo (no ambos a la vez)
+        (hasRole('cocina') && (
+          soloEstadoCocina() ||
+          soloEntregadoMozo()
+        )) ||
+
+        // Mesa (cliente de la mesa): cambiar método de pago mientras no esté
+        // pagado — es el botón "💵 Pagar en caja" del dashboard del cliente
+        (esPedidoMesa() &&
+         resource.data.estado_pago != 'Pagado' &&
+         request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['metodo_pago', 'estado_pago']) &&
+         request.resource.data.estado_pago in ['Pendiente', 'Pendiente verificacion MP']);
+
+      allow delete: if hasRole('admin');
+    }
+
+    // ── config ─────────────────────────────────────────────────
+    // config/categorias y config/sistema: lectura pública (mesas anónimas)
+    match /config/{docId} {
+      allow read:  if true;
+      allow write: if hasRole('admin');
+    }
+  }
+}

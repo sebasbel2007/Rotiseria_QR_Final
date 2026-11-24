@@ -1,0 +1,908 @@
+admin@rotiseria.com / Admin2026
+cajero@rotiseria.com / Cajero2026
+cocina@rotiseria.com / Cocina2026
+tv@gmail.com         / tv1234
+
+https://jokingly-guru-outing.ngrok-free.dev/?mesa=6
+
+https://opncd.ai/share/5M2IMjru
+
+pasar archivo agent y readme 
+
+
+
+hola quiero iniciar un nuevo prooyecto, este chat de contexto y todas las q se creen cuando se termine deben seguir estas reglas para optimizar tokens.
+
+quiero q revises todos los archivos y carpetas de este proyecto precario, y dime q entiendes y cual es su funcion o el resultado a obtener, 
+
+no te centres en errores o incongruencias q tengas, solo quiero retomar este proyecto y agg nuevas funciones mas centradas al lobby de los restaurantes y poner qr para queda mesa, pero antes de eso crea tu propio analisis. despues hablamos y desarrollamos 4 archivos claves .md q seran 
+
+-SCHEMA-BDD
+-ESTRUCTURA-APP
+-CONTEXTO
+
+asi mantenemos toda la informacion y plan de trabajo en un lugar.
+
+firebase:
+cocina@rotiseria-sym.com
+
+cocina123
+
+
+
+admin@rotiseria-sym.com
+admin123
+
+caja@rotiseria-sym.com
+caja123
+
+
+rules:
+rules_version = '2';
+
+
+service cloud.firestore {
+
+
+  match /databases/{database}/documents {
+
+
+
+
+
+    function getRole() {
+
+
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol;
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == userId || getRole() == 'admin');
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update, delete: if request.auth != null && getRole() == 'admin';
+    }
+
+    match /productos/{productoId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && getRole() == 'admin';
+    }
+
+    match /pedidos/{pedidoId} {
+      allow create: if request.auth != null && (
+        request.resource.data.cliente_uid == request.auth.uid ||
+        getRole() in ['cajero', 'admin']
+      );
+      allow read: if request.auth != null && (
+        resource.data.cliente_uid == request.auth.uid ||
+        getRole() in ['cocina', 'cajero', 'admin']
+      );
+      allow update: if request.auth != null && (
+        getRole() == 'admin' ||
+        getRole() == 'cajero' ||
+        (getRole() == 'cocina' &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['estado_cocina', 'motivo_cancelacion']))
+      );
+      allow delete: if request.auth != null && getRole() == 'admin';
+    }
+
+    match /config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && getRole() == 'admin';
+    }
+  }
+}
+
+indices:
+ID de la colección	
+
+
+Campos indexados
+
+
+
+
+
+Alcance de la consulta	ID de índice		Estado	
+
+
+pedidos	
+estado_cocina
+fecha_hora_creacion
+__name__
+Colección	CICAgOjXh4EK		Habilitado	
+productos	
+archivado
+categoria
+__name__
+Colección	CICAgJiUpoMK		Habilitado
+
+estructura de firestore:
+Aquí tienes toda la información de tu base de datos de Firebase ordenada y estructurada por colecciones y documentos:
+
+
+1. Colección: config
+Documento: categorias
+
+
+Campo lista (Array):
+
+
+[0]:
+
+
+nombre: "Pollos"
+
+
+visible: true
+
+
+[1]:
+
+
+nombre: "Milanesas"
+
+
+visible: true
+
+
+[2]:
+
+
+nombre: "Guarniciones"
+
+
+visible: true
+
+
+2. Colección: pedidos
+UID del documento seleccionado: 3tMgbSi64UHZr2oYZQRy
+
+
+Datos del documento:
+
+
+cliente_uid: "2o5IF5aXJhegJuvg0AFttZbCDUw1"
+
+
+entregado: true
+
+
+estado_cocina: "Entregado"
+
+
+estado_pago: "Pagado"
+
+
+fecha_hora_creacion: 6 de julio de 2026 a las 9:07:11 p.m. UTC-3
+
+
+items (Array):
+
+
+[0]:
+
+
+cantidad: 1
+
+
+nombre: "Pollo"
+
+
+notas: ""
+
+
+precio_unitario: 6000
+
+
+producto_id: "7KJGysQdtxMsh3Ul2RI2"
+
+
+subtotal: 6000
+
+
+variante: "Con papas fritas"
+
+
+metodo_pago: "Efectivo"
+
+
+nombre_cliente: "aaaa"
+
+
+notas_cliente: ""
+
+
+tipo_consumo: "Comer en el local"
+
+
+total: 6000
+
+
+3. Colección: productos
+UID del documento seleccionado: 7KJGysQdtxMsh3Ul2RI2
+
+
+Datos del documento:
+
+
+archivado: false
+
+
+categoria: "Pollos"
+
+
+composicion (Array):
+
+
+[0]: "Pollo"
+
+
+[1]: "Condimentos"
+
+
+descripcion: "Media unidad de pollo al spiedo, ideal para una persona."
+
+
+estado: "Disponible"
+
+
+nombre: "Pollo"
+
+
+precio: 4500
+
+
+tiempo_preparacion_min: 20
+
+
+url_foto: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=400"
+
+
+variantes (Array):
+
+
+[0]:
+
+
+extra_precio: 1500
+
+
+nombre: "Con papas fritas"
+
+
+4. Colección: users
+UID del documento seleccionado: 2o5IF5aXJhegJuvg0AFttZbCDUw1
+
+
+Datos del documento:
+
+
+email: "caja@rotiseria-sym.com"
+
+
+nombre: "Caja"
+
+
+rol: "cajero"
+
+
+
+no crees los archivos aun, primero hablemos despues q me des tu resumen 
+Analicé todo el proyecto. Resumen:
+
+Qué es
+SPA monolítica Rotisería SYM, gestión completa de rotisería en Vanilla JS + Firebase (compat CDN, sin bundler). Un solo index.html, vistas inyectadas en #app, RBAC por rol según users/{uid}.rol.
+
+Stack
+Frontend: HTML + CSS3 (BEM, variables --rojo-tuco/#D32F2F, dark theme en dark.css) + JS globales (sin import/export)
+Backend: Firestore + Auth (Email/Pass + Google), Firebase 10.12.2 vía CDN
+Entorno: Live Server, sin npm. Todo corre desde index.html
+Módulos por rol
+Rol	Vista	Qué hace
+cliente	cliente.js + checkout.js	Menú por categorías (acordeones, en tiempo real), carrito en memoria, checkout sin login obligatorio (Efectivo/MP/Transferencia), pago ficticio
+cualquier	tracker.js	Seguimiento en vivo del pedido: progreso, cancelación, alerta según tipo de consumo
+cocina	cocina.js	KDS dark: cola en vivo, Iniciar/Listo/Demorar/Cancelar, sonido al ticket nuevo, badge de pendientes
+cajero	cajero.js	POS 3 tabs: cobros pendientes, pedidos en curso (entregar), nuevo pedido walk-in
+admin	admin.js	CRUD productos (variantes, composición, archivar/agotar), gestión categorías (visible/oculta en config), dashboard de ventas (KPI hoy/semana/mes, top5, métodos de pago)
+Modelo de datos actual
+users/{uid}: {email, nombre, rol}
+productos/{id}: {nombre, precio, categoria, variantes[], composicion[], estado, archivado, url_foto, tiempo_preparacion_min}
+pedidos/{id}: {cliente_uid, nombre_cliente, tipo_consumo, items[], estado_cocina, estado_pago, metodo_pago, total, notas_cliente, entregado, fecha_hora_creacion}
+config/categorias: {lista: [{nombre, visible}]}
+Índices ya creados: pedidos(estado_cocina,fecha) y productos(archivado,categoria)
+Estado actual
+Sesiones 1–11 completadas, más un refactor que eliminó el login obligatorio para pedir (flujo anónimo con cliente_uid:'anonimo'). App funcional, cercana a pruebas reales.
+
+Mi análisis propio
+El proyecto es sólido y consistente (service layer limpio, listeners desacoplados, reglas RBAC correctas). El punto débil para lo que querés hacer: hoy no existe concepto de "mesa ni lobby" — el tipo_consumo es un string fijo ("Comer en el local"/"Retirar") y no hay forma de vincular un pedido a una mesa ni a un QR. Las vistas cliente/cocina/cajero no distinguen mesas.
+
+Para las nuevas features (lobby + QR por mesa)
+La base se adapta bien. Ideas iniciales:
+
+Colección mesas: {numero, nombre, qr_id, estado (Libre/Ocupada), capacidad, zona}
+QR por mesa → ruta ?mesa=<id> que precarga el pedido con esa mesa
+Tipo de consumo nuevo / campo mesa_id en pedidos para que cocina y cajero sepan a qué mesa enviar
+Vista lobby (tactil/televisor) para admin/encargado: mapa de mesas con estado en vivo
+Error handling: firestore.rules tendrá que abrir lectura de mesas a anónimos y lectura de pedidos por mesa_id
+Plan de trabajo propuesto
+Definir visión del lobby (hay un solo salón? secciones? capacidad?)
+Definir flujo QR: el cliente escanea → ¿pide y paga desde la mesa? ¿o solo "ocupa" la mesa?
+Crear los archivos SCHEMA-BDD.md, ESTRUCTURA-APP.md, CONTEXTO.md (mencionaste 4 — asumo que el 4to puede ser AGENT.md actualizándolo)
+Esas 3 preguntas de definición son clave antes de escribir el schema. ¿Cómo querés que funcione el flujo del QR en la mesa?
+
+
+
+
+
+
+
+
+
+
+
+
+---------
+okey hasta ahi todo claro despues hablamos de las preguntas,
+
+yo en un proyecto previo, hice una aplicacion de una plataforma de curso para pc, y despues copie todos esos archivos los puse en una carpeta aparte y los "traduci" a celular con programacion pwa agg archivos y acomodando el hud a dispostivos de pantallas mas pequeños, 
+
+q pasa con este proyecto:
+la caja, admin, cocina, debe estar pensado para monitores y tv grandes, por ende estan hechos de forma app web normal.
+
+pero si el cliente llega a scanear un qr ya lo mejor seria o hacer una app web responsive de verdad, o una app para tlf q a la final siggue siendo una app web, y lo q pesaria seria kilobites, 
+
+
+la idea central de lo q hay q agg es q el cliente fisico dentro del local sea cual sea, este logueado o no, (hay q tener login opcional en el qr) cuando scanee el qr le abra la carta del menu para hacer su pedido (lo q ya tenemos) pero q la interfaz sea personalizada poniendo el numero de mesa claro con la q esta pidiendo la comida, y lo mismo para lo demas, q el user sea la mesa, de manera q en todos las partes de la app donde se muestra el pedido vigente(desde q se pide, hasta q se paga y se entrega en la mesa osea sale despachado de la cocina) se maneje todo con mesa, 
+
+Entonces el problema esta ahi
+
+ya q tenemos una base personalizada a usuarios fijos del local (caja admin cocina). usuarios personales( usuarios q se crean una cuenta)
+
+y ahora hay q hacerla hibrida a usuarios q seria la mesa, pero de igual forma hay q ver q es mejor para ellos una app web resposive o una app de tlf pwa, con la opcion de iniciar sesion si quieren,
+
+por ende esta misma app ya tendria las 2 opciones, 
+por un lado las q ya tenemos, hacer pedido a domicilio o ir pidiendo q vallan preparando la comida para retirar o comer en la mesa
+
+y lo nuevo q seria scanear qr  y el user es la mesa, pero eso chocaria con todo lo demas, se entiende ? 
+
+lo q se me ocurre es eliminar la parte vieja de comer en local y transformala para q ahora tengamos 2 partes,
+
+domicilio/comer en local (ya se le asocia una mesa disponible)
+
+dime q ´piensas q ideas se te ocurren  y hazme una lista de tareas y preguntas q necesitas antes de tocar archivos
+
+
+
+
+------------
+Entendido. Estoy en modo planificación (solo lectura). Voy a explorar el código actual para entender la arquitectura completa antes de proponer el plan.
+
+Ahora tengo comprensión completa de la arquitectura actual. Voy a formular mi análisis y plan.
+
+ANÁLISIS COMPLETO Y PLAN DE TRABAJO
+Lo que entendí del proyecto actual
+Arquitectura: SPA monolítica Vanilla JS + Firebase (compat CDN). Un solo index.html, vistas inyectadas en #app, RBAC por users/{uid}.rol.
+
+Flujo actual:
+
+cliente (auth required) → menú con acordeones → carrito en memoria → checkout con tipo_consumo: "Comer en el local" | "Retirar" → crea pedido en Firestore con cliente_uid del usuario autenticado → tracker en tiempo real
+cocina (KDS dark) → escucha estado_cocina in [Pendiente, En Preparación, Demorado] → botones Iniciar/Listo/Demorar/Cancelar
+cajero (POS 3 tabs) → cobros pendientes, pedidos en curso, nuevo pedido walk-in
+admin → CRUD productos + dashboard ventas
+Problema identificado: No existe concepto de mesa. El tipo_consumo es un string fijo y no hay vínculo mesa-pedido. Las vistas no distinguen mesas.
+
+Mi propuesta de arquitectura híbrida
+1. Dos "tipos de usuario" coexistiendo
+Tipo	Identidad	Auth	Uso
+Usuario real	users/{uid} (Firebase Auth)	Email/Pass + Google	Delivery, retirar, historial, fidelidad
+Mesa (pseudo-usuario)	mesas/{mesaId} (Firestore only)	Sin Auth (anónimo)	Comer en local vía QR
+2. Flujo QR → Mesa
+QR en mesa (URL: /?mesa=M12) 
+  → Abre vista cliente móvil (PWA responsive) 
+  → Header muestra " Mesa 12" 
+  → Pedido se crea con: mesa_id: "M12", cliente_uid: "mesa:M12", tipo_consumo: "Mesa"
+  → Cocina ve "Mesa 12" en comanda 
+  → Cajero ve "Mesa 12" en cobros/entrega 
+  → Al pagar/entregar → mesa vuelve a Libre
+3. Cambios mínimos en modelo actual
+Nueva colección: mesas/{mesaId} → {numero, nombre, qr_id, estado: "Libre|Ocupada|Reservada", capacidad, zona, activa: true}
+En pedidos: agregar mesa_id (string), tipo_consumo: "Mesa" (nuevo valor), cliente_uid: "mesa:{mesaId}" para pedidos de mesa
+Reglas Firestore: permitir lectura anónima de productos y config/categorias; permitir create de pedidos con cliente_uid que empiece con "mesa:" y mesa_id válido
+Vista lobby (nueva, para admin/cajero): mapa visual de mesas en tiempo real
+4. PWA / Responsive
+Una sola codebase. Vista cliente.js se adapta:
+Desktop (usuario logueado): menú completo, header con nav, carrito sidebar
+Mobile/QR (?mesa=xxx): header fijo con "Mesa X", carrito bottom-sheet, botones touch-friendly, PWA manifest + service worker
+Login opcional en QR: botón "Iniciar sesión" en header móvil → si loguea, vincula pedido a su usuario + mesa (historial, puntos)
+Lista de tareas (orden de implementación)
+#	Tarea	Archivos afectados
+1	Schema BDD → Definir mesas, extender pedidos, actualizar rules	SCHEMA-BDD.md, firestore.rules
+2	Estructura App → Definir vistas, rutas, estados, PWA	ESTRUCTURA-APP.md
+3	Contexto → Decisiones, flujos, edge cases	CONTEXTO.md
+4	Colección mesas + seed + índices Firestore	js/seed.js, Firebase Console
+5	firestore.rules actualizadas (lectura anónima productos, mesa-pedidos)	firestore.rules
+6	Router → detectar ?mesa=, modo "mesa" vs "usuario", header dinámico	js/router.js, js/auth.js
+7	Vista Cliente responsive → header mesa, bottom-sheet carrito, PWA meta	js/views/cliente.js, css/style.css, index.html
+8	Checkout adaptado → para mesa: sin tipo_consumo (fijo "Mesa"), pago en mesa	js/views/checkout.js
+9	Tracker mesa → muestra "Mesa X", botón "Llamar mozo"	js/views/tracker.js
+10	Cocina → mostrar mesa_id prominente en comanda	js/views/cocina.js
+11	Cajero → tab "Mesas" (mapa visual), cobro por mesa, entregar en mesa	js/views/cajero.js
+12	Vista Lobby (nueva) → grid mesas tiempo real, estados, para TV/admin	js/views/lobby.js (nuevo)
+13	PWA → manifest, service worker, offline básico	manifest.json, sw.js, index.html
+14	Testing integrado + documentación	—
+Preguntas clave antes de codear
+¿Cuántas mesas y cómo se numeran? (ej: 1-20, o por zonas: "Terraza-1", "Salón-A-5")
+¿El QR apunta a URL pública (GitHub Pages) o localhost en red local?
+¿Login en mesa es opcional o obligatorio? (Mi propuesta: opcional, botón en header móvil)
+¿Qué pasa si el cliente escanea, pide, y se va sin pagar? → Mesa queda "Ocupada" con pedido pendiente; cajero ve deuda en tab Mesas
+¿Pedidos de mesa se pagan en caja o en la mesa? (Mi propuesta: selector en checkout móvil: "Pagar en caja" | "MercadoPago en mesa" | "Transferencia en mesa")
+¿Lobby es vista aparte o tab en cajero/admin? (Mi propuesta: tab en cajero + vista dedicada /lobby para TV)
+¿Imprimen comanda en cocina o solo pantalla KDS? (Si imprimen: agregar mesa_id al ticket)
+¿Manejan reservas? (Si sí: estado "Reservada" en mesa, con hora y nombre)
+Próximo paso
+Tú me confirmas/ajustas las 7 preguntas arriba → yo genero los 4 archivos .md (SCHEMA-BDD, ESTRUCTURA-APP, CONTEXTO, AGENT actualizado) → arrancamos implementación por orden de la tabla.
+
+¿Te parece bien el enfoque? ¿Respondes las preguntas o querés ajustar algo del diseño? 
+
+
+
+--------------------------------
+
+  20/08/2026
+
+vamos hace unos nuevos cambios 
+
+lee toda la conversasion de cuentas y retoma la conversasion 
+Entendido. Estoy en modo planificación (solo lectura). Voy a explorar el código actual para entender la arquitectura completa antes de proponer el plan.
+
+Ahora tengo comprensión completa de la arquitectura actual. Voy a formular mi análisis y plan.
+
+ANÁLISIS COMPLETO Y PLAN DE TRABAJO
+Lo que entendí del proyecto actual
+Arquitectura: SPA monolítica Vanilla JS + Firebase (compat CDN). Un solo index.html, vistas inyectadas en #app, RBAC por users/{uid}.rol.
+
+Flujo actual:
+
+cliente (auth required) → menú con acordeones → carrito en memoria → checkout con tipo_consumo: "Comer en el local" | "Retirar" → crea pedido en Firestore con cliente_uid del usuario autenticado → tracker en tiempo real
+cocina (KDS dark) → escucha estado_cocina in [Pendiente, En Preparación, Demorado] → botones Iniciar/Listo/Demorar/Cancelar
+cajero (POS 3 tabs) → cobros pendientes, pedidos en curso, nuevo pedido walk-in
+admin → CRUD productos + dashboard ventas
+Problema identificado: No existe concepto de mesa. El tipo_consumo es un string fijo y no hay vínculo mesa-pedido. Las vistas no distinguen mesas.
+
+Mi propuesta de arquitectura híbrida
+1. Dos "tipos de usuario" coexistiendo
+Tipo	Identidad	Auth	Uso
+Usuario real	users/{uid} (Firebase Auth)	Email/Pass + Google	Delivery, retirar, historial, fidelidad
+Mesa (pseudo-usuario)	mesas/{mesaId} (Firestore only)	Sin Auth (anónimo)	Comer en local vía QR
+2. Flujo QR → Mesa
+QR en mesa (URL: /?mesa=M12) 
+  → Abre vista cliente móvil (PWA responsive) 
+  → Header muestra " Mesa 12" 
+  → Pedido se crea con: mesa_id: "M12", cliente_uid: "mesa:M12", tipo_consumo: "Mesa"
+  → Cocina ve "Mesa 12" en comanda 
+  → Cajero ve "Mesa 12" en cobros/entrega 
+  → Al pagar/entregar → mesa vuelve a Libre
+3. Cambios mínimos en modelo actual
+Nueva colección: mesas/{mesaId} → {numero, nombre, qr_id, estado: "Libre|Ocupada|Reservada", capacidad, zona, activa: true}
+En pedidos: agregar mesa_id (string), tipo_consumo: "Mesa" (nuevo valor), cliente_uid: "mesa:{mesaId}" para pedidos de mesa
+Reglas Firestore: permitir lectura anónima de productos y config/categorias; permitir create de pedidos con cliente_uid que empiece con "mesa:" y mesa_id válido
+Vista lobby (nueva, para admin/cajero): mapa visual de mesas en tiempo real
+4. PWA / Responsive
+Una sola codebase. Vista cliente.js se adapta:
+Desktop (usuario logueado): menú completo, header con nav, carrito sidebar
+Mobile/QR (?mesa=xxx): header fijo con "Mesa X", carrito bottom-sheet, botones touch-friendly, PWA manifest + service worker
+Login opcional en QR: botón "Iniciar sesión" en header móvil → si loguea, vincula pedido a su usuario + mesa (historial, puntos)
+Lista de tareas (orden de implementación)
+#	Tarea	Archivos afectados
+1	Schema BDD → Definir mesas, extender pedidos, actualizar rules	SCHEMA-BDD.md, firestore.rules
+2	Estructura App → Definir vistas, rutas, estados, PWA	ESTRUCTURA-APP.md
+3	Contexto → Decisiones, flujos, edge cases	CONTEXTO.md
+4	Colección mesas + seed + índices Firestore	js/seed.js, Firebase Console
+5	firestore.rules actualizadas (lectura anónima productos, mesa-pedidos)	firestore.rules
+6	Router → detectar ?mesa=, modo "mesa" vs "usuario", header dinámico	js/router.js, js/auth.js
+7	Vista Cliente responsive → header mesa, bottom-sheet carrito, PWA meta	js/views/cliente.js, css/style.css, index.html
+8	Checkout adaptado → para mesa: sin tipo_consumo (fijo "Mesa"), pago en mesa	js/views/checkout.js
+9	Tracker mesa → muestra "Mesa X", botón "Llamar mozo"	js/views/tracker.js
+10	Cocina → mostrar mesa_id prominente en comanda	js/views/cocina.js
+11	Cajero → tab "Mesas" (mapa visual), cobro por mesa, entregar en mesa	js/views/cajero.js
+12	Vista Lobby (nueva) → grid mesas tiempo real, estados, para TV/admin	js/views/lobby.js (nuevo)
+13	PWA → manifest, service worker, offline básico	manifest.json, sw.js, index.html
+14	Testing integrado + documentación	—
+Preguntas clave antes de codear
+¿Cuántas mesas y cómo se numeran? (ej: 1-20, o por zonas: "Terraza-1", "Salón-A-5")
+¿El QR apunta a URL pública (GitHub Pages) o localhost en red local?
+¿Login en mesa es opcional o obligatorio? (Mi propuesta: opcional, botón en header móvil)
+¿Qué pasa si el cliente escanea, pide, y se va sin pagar? → Mesa queda "Ocupada" con pedido pendiente; cajero ve deuda en tab Mesas
+¿Pedidos de mesa se pagan en caja o en la mesa? (Mi propuesta: selector en checkout móvil: "Pagar en caja" | "MercadoPago en mesa" | "Transferencia en mesa")
+¿Lobby es vista aparte o tab en cajero/admin? (Mi propuesta: tab en cajero + vista dedicada /lobby para TV)
+¿Imprimen comanda en cocina o solo pantalla KDS? (Si imprimen: agregar mesa_id al ticket)
+¿Manejan reservas? (Si sí: estado "Reservada" en mesa, con hora y nombre)
+Próximo paso
+Tú me confirmas/ajustas las 7 preguntas arriba → yo genero los 4 archivos .md (SCHEMA-BDD, ESTRUCTURA-APP, CONTEXTO, AGENT actualizado) → arrancamos implementación por orden de la tabla.
+
+¿Te parece bien el enfoque? ¿Respondes las preguntas o querés ajustar algo del diseño?
+
+1: la idea de las mesas sigue a desarrollar ya q mi idea hablando con mi equipo de trabajo y el cliente es q lo q el cliente necesita es exactamente lo q dijiste, tiene q ser una parte nueva en la app, q pueda tanto caja como admin, de esta manera se lleva el control en tiempo real, cual es mi idea para esto:
+
+en esta nueva seccion q se llega por medio una barra de navegacion lateral q se puede minimizar obviamente, cuando se seleccione la opcion de mesas muestre un dashboard con varias cuestiones, primero una fila con las diferentes pestañas, estas pestañas seran basicamanete el nombre de como tu dices las zonas, una vez seleccionado una pestaña va a mostrar en tiempo real una cuadricula q tenga las mesas con numeros, cual es la idea de esta cuadrilla q sea personalizable para poder mover las mesas a como se ve en el dia dia, obviamnete desde una vista area, los cuadrados de las mesas van a tener el numero en el centro y el fondo del cuadrado va a tener varios colores dependiendo del estado.
+
+aca quiero q me recomiendes estados y colores asi mejoramos el diseño, m idea es 
+
+vacio ( libre para sentarse ) = verde
+si se escanea el qr y la mesa se activa en el sentido de q esta siendo usada y ocupada en el sistema es porq ya hay comenzales en la mesa y estan haciendo el pedido  = gris
+
+si ya se hizo el pedido y este paso a cocina (estadi de preparacion cuando el cliente hace su pedido en su dash) = verde o naranja cual recomiendas 
+
+cuando ya la cocina marca como listo el plato esto quiere decir q en persona el moso lleva la comida a la mesa eso quiere decir q estan comiendo y siguen usando la mesa = rojo 
+
+y el flujo final seria q cuando la aplicacion detecta q se pago desde el dash del cliente ( pasarela de pago de mercado pago ) o en su defecto pago en efectivo y el cajero puso manualmente " click en cuadrado con N de mesa- la mesa pago- se libera la mesa y se pone en reposo con su color correspondiente 
+
+
+
+aparte de esto en el mismo dash donde se ven los cuadrados de las mesas de colres, cuando la caja o el admin haga click en una mesa se tiene q desplegar un menu en el lado derecho de la pantalla, superponiendose arriba de los cuadrados de mesa q estan de fondo del dashboard. 
+
+
+en este cuadrado tiene q mostrar el estado de la mesa, y lo q pidio la mesa, osea lista de comidas q pidio, tmabien datos claves como ya tenemos como pedir modificaciones especiales, comentarios, o agg q ya tenemos en la app base. y por el ultimo el monto final de pago, y uno btn de mesa paga o cancelar mesa, esta opcion debe pedir una clave especial del supervisor ya q se supone q por razones especiales es q ese pedido se cancelo, asi evitamos problemas en la app por cosas del diario, vamos a ponerle a esta contraseña "supervisor666" de esta manera se puede eliminar el pedido de la app y todas las partes donde este pedido aparezca en vivo en la app, y por ende crear una nueva seccion en en el dashboard de resumenes del admin, de pedidos cancelados, asi se lleva un historial de esto tambien. 
+
+- tambien quiero agg sistema de delivery falso, en el sentido q el usuario con cuenta creada pueda pedir a domicilio, entonces usar el mapa de google q tiene todas las pag en su footer, pero esta vez para poner su direccion, con eso ya queria el pedido, y cuando cocina lo suelte pues q marque enviado a su destino y ya, ahi termina el flujo, anota esto a tareas pendientes 
+
+2: para este proyecto vamos a usar por ahora un servidor local de node, "server.js" esta mas q suficiente y ngrock para poder abrir en varios dipositvos los difrentes dashboards, cocina, admin,caja, y si la persona ya tiene una cuenta y o se crea una, el dash de usuario comenzal q ya tenemos, con la diferencia q con los cambios basicos q ya tiene la app como q por ejemplo, tiene q elegir mesa obligatorio si va a comer dentro, y sin mesa si va a retirar comida, o pedir a domicilio.
+
+aca viene el tema de los qr, quiero crear un sistema automatico de un html por qr, de esta manera hay un dash por cada mesa, se puede generar un qr automatico para cada mesa, y el admin en su panel puede mandar a imprimir o copiar este qr fijo asi funcionan los qr de las mesas.
+
+en esta pregunta numero 2 necesio profundizar con mas preguntas porq nunca e usado qr en aplicaciones, lo q te dije antes es lo q  ami se me ocurre, necesito tu guia y explicacion de q se usa profesionalemnte en los restaurantes reales q facturan  
+
+
+
+3- si se escanea el qr  de la mesa el login es completamente innecesario y nose debe mostrar en nigun lado, solo en una parte q no incomode, donde si la persona inicia sesion se le pone de manera automatica el numero de mesa, ya q para algo escaneo el qr segundos antes 
+
+4- bueno si eso llega a pasar crea una nueva seccion de cancelar el pedido de mesa, y q despues de q el supervisor ponga la contraseña elija el motivo, 
+
+pon variso motivos reales
+-se fue sin pagar
+-error en pedido
+-problemas en cocina
+-error...
+
+inventa ahi casos reales, despues de q se cancele el pedido pues acaba el flujo y la mesa queda liberada y en verde
+
+
+5: ya lo explique antes, antes de hacer el pedido como ya tenemos se elige el metodo de pago, qr mercado pago o efectivo en caja, 
+
+aca quiero tambien agg al dashboard de caja q cuando le da al btn de pagar mesa para liberarla q elija el metodo de pago, si es qr (/aunq el cliente dijo q pagaria en caja, esto siempre pasa en el diario)  o si es efectivo (cuanto dio el cliente y q calcule el vuelto )
+
+6:ya dije, actualizar toda la app y agg barras de navegacion laterales q se puedan esconder, en este caso el unico q no necesitaria esto seria cocina ya q no tiene tantas secciones o acciones.
+
+volviendo al dashboard de caja y admin, si una seccion q diga mesas y gestionar mesas ( crud de mesas solo en el admin)  y ahi todo lo q ta te explique en la pregunta 1, pestañas, mesas de fondo,  y cuando se hace click en una mesa resumen de pedido y estado 
+
+
+7:  no entiendo esta pregunta, vuelvemla hacer mas profunda y facil de entender 
+
+8: no, sin reservas por ahora
+
+
+
+-Aparte a las respuestas de las pregunta:
+- vuelve hacerme todas las preguntas necesarias ahora q entiendes a donde quiero llevar el nivel y estilo profesional de mi app 
+- no codees nada aun 
+- vuelve a actualizar tu analizis y vuelve a pesar q necesitamos para esta nueva informacion pensando en todos los detales app, bdd, seguridad, reglas, etc etc 
+
+actualizar entonces  " Mi propuesta de arquitectura híbrida
+1. Dos "tipos de usuario" coexistiendo
+Tipo	Identidad	Auth	Uso
+Usuario real	users/{uid} (Firebase Auth)	Email/Pass + Google	Delivery, retirar, historial, fidelidad
+Mesa (pseudo-usuario)	mesas/{mesaId} (Firestore only)	Sin Auth (anónimo)	Comer en local vía QR
+2. Flujo QR → Mesa
+QR en mesa (URL: /?mesa=M12) 
+  → Abre vista cliente móvil (PWA responsive) 
+  → Header muestra " Mesa 12" 
+  → Pedido se crea con: mesa_id: "M12", cliente_uid: "mesa:M12", tipo_consumo: "Mesa"
+  → Cocina ve "Mesa 12" en comanda 
+  → Cajero ve "Mesa 12" en cobros/entrega 
+  → Al pagar/entregar → mesa vuelve a Libre
+3. Cambios mínimos en modelo actual
+Nueva colección: mesas/{mesaId} → {numero, nombre, qr_id, estado: "Libre|Ocupada|Reservada", capacidad, zona, activa: true}
+En pedidos: agregar mesa_id (string), tipo_consumo: "Mesa" (nuevo valor), cliente_uid: "mesa:{mesaId}" para pedidos de mesa
+Reglas Firestore: permitir lectura anónima de productos y config/categorias; permitir create de pedidos con cliente_uid que empiece con "mesa:" y mesa_id válido
+Vista lobby (nueva, para admin/cajero): mapa visual de mesas en tiempo real
+4. PWA / Responsive
+Una sola codebase. Vista cliente.js se adapta:
+Desktop (usuario logueado): menú completo, header con nav, carrito sidebar
+Mobile/QR (?mesa=xxx): header fijo con "Mesa X", carrito bottom-sheet, botones touch-friendly, PWA manifest + service worker
+Login opcional en QR: botón "Iniciar sesión" en header móvil → si loguea, vincula pedido a su usuario + mesa (historial, puntos)
+Lista de tareas (orden de implementación)
+#	Tarea	Archivos afectados
+1	Schema BDD → Definir mesas, extender pedidos, actualizar rules	SCHEMA-BDD.md, firestore.rules
+2	Estructura App → Definir vistas, rutas, estados, PWA	ESTRUCTURA-APP.md
+3	Contexto → Decisiones, flujos, edge cases	CONTEXTO.md
+4	Colección mesas + seed + índices Firestore	js/seed.js, Firebase Console
+5	firestore.rules actualizadas (lectura anónima productos, mesa-pedidos)	firestore.rules
+6	Router → detectar ?mesa=, modo "mesa" vs "usuario", header dinámico	js/router.js, js/auth.js
+7	Vista Cliente responsive → header mesa, bottom-sheet carrito, PWA meta	js/views/cliente.js, css/style.css, index.html
+8	Checkout adaptado → para mesa: sin tipo_consumo (fijo "Mesa"), pago en mesa	js/views/checkout.js
+9	Tracker mesa → muestra "Mesa X", botón "Llamar mozo"	js/views/tracker.js
+10	Cocina → mostrar mesa_id prominente en comanda	js/views/cocina.js
+11	Cajero → tab "Mesas" (mapa visual), cobro por mesa, entregar en mesa	js/views/cajero.js
+12	Vista Lobby (nueva) → grid mesas tiempo real, estados, para TV/admin	js/views/lobby.js (nuevo)
+13	PWA → manifest, service worker, offline básico	manifest.json, sw.js, index.html
+14	Testing integrado + documentación	—"
+
+
+
+hazme mas preguntas para determinar hasta el ultimo detalle, no des nada por hecho ni basico, quiero adapatar este sistema a cualquier lugar de comida 
+
+
+-------
+Voy a analizar el contexto guardado en cuentas.txt y explorar la estructura de tu
+
+Voy a leer el contexto de la sesión anterior y las reglas del
+
+Analizando el código actual. Leo los archivos clave en
+
+Leyendo services y views en paralelo.
+
+Leo los docs restantes (memory bank + chat dev) para contexto
+
+Leído todo: cuentas.txt completo, AGENT.md, todas las vistas/services, CSS, firestore.rules, memory-bank y README. Acá está el análisis actualizado y las preguntas para cerrar el diseño. No codifico nada todavía.
+
+Análisis actualizado (post-respuestas 20/08)
+Lo que se mantiene intacto: arquitectura SPA Vanilla JS + Firebase compat CDN, roles staff, KDS cocina, POS cajero, CRUD admin, integración con ngrok (server.js estático) para abrir dashboards en varios dispositivos.
+
+Lo que cambia radicalmente con tus decisiones:
+
+Antes (flujo actual)	Después (flujo propuesto)
+tipo_consumo: "Comer en el local"/"Retirar"	tipo_consumo: "Mesa" / "Retirar" / "Domicilio"
+Pedido ligado a usuario o anónimo	Pedido de mesa → cliente_uid:"mesa:{id}", mesa_id, zona
+Sin concepto de mesa	Colección mesas + pestañas por zona + dashboard grid con posiciones
+Tracker genérico	Tracker por mesa + header "Mesa N" + login discreto
+Sin delivery	Delivery con dirección (Google) + estado "Enviado"
+Modelo de datos nuevo (drivers del schema BDD):
+
+mesas/{id} → { numero, zona, capacidad, estado, pos_x, pos_y, activa }
+pedidos + campos: mesa_id, zona, tipo_consumo extendido, tipo_entrega/direccion_entrega, cancelado_por, motivo_cancelacion, clave_usada
+config/ → categorias, zonas, local (nombre, moneda, métodos de pago), qr_base_url
+Historial de cancelados → sección en el resumen ventas del admin (deriva del campo estado_cocina:"Cancelado" + auditoría, sin colección nueva) — o colección dedicada, lo decidís abajo.
+Riesgo detectado que hay que resolver en reglas: hoy confirmarPedido() pide usuario.uid y el flujo anónimo actual crashearía con null (lo arreglo en refactor). Para las mesas: las reglas Firestore no pueden validar la clave "supervisor666" server-side sin Cloud Functions; la validación real posible es (a) cliente-side + regla de auditoría (cajero/admin pueden cancelar) o (b) Cloud Functions para cancelación segura. Necesito tu decisión (pregunta G25).
+
+Preguntas para cerrar el diseño (respondeme numerando)
+A) Local genérico / configuración
+
+Para "adaptar a cualquier lugar de comida": ¿qué debe ser configurable en config/? Propongo: nombre del local, moneda (ARS ahora), métodos de pago habilitados, tiempo de espera de alerta, zonas y mesas. ¿Agregarías algo (horarios, dirección local)?
+B) Mesas y zonas 2. ¿Cuántas mesas tenés y en cuántas zonas? (ejemplo: "Salón 12, Terraza 6, Barra 4") 3. Capacidad por mesa (2/4/6/8): ¿se configura y se muestra en el cuadrado, o solo número? 4. Editor del plano: ¿"mover mesas" = arrastrar y soltar en una vista aérea con guardado de posición X/Y? ¿Necesitás tamaños/colores de cuadrado configurable o estándar? ¿Hay paredes/muebles de fondo que quieras visualizar? Con drag&drop guardo pos_x,pos_y en cada mesa. 5. En el cuadrado ¿que muestre solo número + color de estado, o también algo extra (ej: "pago pendiente" parpadeando)? 6. Colores estados (mi recomendación contrastada para TV):
+
+Libre (para sentarse) → 🟢 verde
+Ocupada (escaneó QR, armando pedido) → 🔵 gris-azulado
+En cocina (pedido confirmado, se prepara) → 🟠 naranja
+Comiendo / Servido (cocina marcó Listo) → 🔴 rojo
+Mensaje cuando paga → transición flash → vuelve verde. La clave que te pediste: con pedido en cocina naranja (mejor que verde, porque verde queda reservado a "libre" y la lectura visual se confunde). ¿OK? ¿Agregamos estado "alerta" si la mesa espera > N minutos (ej 30')? ¿N=?
+C) Flujo QR / mesa 7. Tu "un HTML por QR": en restaurantes reales se usa un solo deploy y cada QR apunta a URL?mesa=N. Así no hay que mantener 20 HTML. El QR se imprime una vez por mesa y queda fijo. ¿Aceptás ese modelo (recomendado) o querés falta una carpeta/HTML por mesa? 8. Al escanear: ¿header móvil muestra "Mesa N" + menú directo (sin login)? Confirmar. 9. Login discreto: ¿pequeño botón/icono en el header móvil? Si inicia sesión → se le setea la mesa automáticamente (server-side el alias mesa:{id}). Confirmar. 10. ¿Cuándo pasa la mesa a Ocupada gris: al escanear (solo carga la URL) o al confirmar el primer pedido? (Si es al escanear, cualquier persona que mire el QR sin pedir deja la mesa "ocupada" → definamos cómo se libera, ver #11.) 11. ¿Mesa libre si escaneó y no pidió? → opciones: cajero la libera manual en el dashboard, o timeout automático (¿10 min?). ¿Cuál? 12. ¿Una mesa puede tener 2+ pedidos (ronda 1 y 2)? ¿El panel del dashboard suma los totales por mesa? (recomiendo sí: sumar pedidos activos de la mesa).
+
+D) Pago 13. MercadoPago real o simulado + confirmación manual? Un QR de "cobro" de MP con alias/CBU requiere que un humano (el cajero) confirme el pago. Una integración real (Checkout Pro / link de pago) requiere cuenta MP con credenciales, HTTPS y webhook/confirmation. ¿Qué querés para el MVP? 14. Cobro efectivo en caja: click en mesa → "Pagar mesa" → elige método → si Efectivo: campo "cuánto pagó el cliente" → calcula vuelto → confirmar → mesa a Libre. ¿Correcto? 15. ¿Pagar libera la mesa siempre (= fin de estadía)? ¿O a veces pagan y siguen consumiendo (ronda 2)? Si pagan y siguen, el estado debería volver a "comiendo" no a "libre" hasta que el cajero haga "Liberar mesa". ¿Qué elegís?
+
+E) Delivery 16. ¿Delivery requiere cuenta (login) — y para retirar (take-away) sigue sin login? Confirmar. 17. Dirección: ¿input de texto + botón "abrir en Google Maps" (sin API key, gratis), o autocompletar con Google Places (requiere API key con costo)? El "mapa de Google del footer" es un widget embebido gratis — aclarame qué querés: campo de dirección solito o mapa interactivo. 18. Costo de envío: ¿se cobra? ¿Es configurable y se suma al total?
+
+F) Staff / dashboards 19. Secciones finales:
+
+Cajero: POS / Mesas (dashboard cajero) — ¿algo más?
+Admin: Menú / Categorías / Ventas / Mesas (CRUD + editor) / Pedidos cancelados / Ventas... Juliámenes el sidebar con esto.
+Cocina: sin sidebar (confirmado por vos). ¿Querés que cocina también vea a qué mesa va el plato? (recomiendo sí, número grande en la comanda).
+Vista Lobby para TV: ¿modo quiosco (reloj, contadores de ocupación, sin interacción) igual al dashboard de mesas?
+G) Seguridad / reglas / datos 21. Supervisión cancelación: (a) validar clave en el cliente + regla que exige cancelado_por y motivo_cancelacion al cancelar, o (b) Cloud Functions para que la clave NUNCA viaje al frontal (más seguro, más setup). Además: ¿la clave la guardo en config/seguridad (solo admin puede leer) — te hago un script para cambiarla sin tocar reglas? 22. ¿Registro de cancelados: colección aparte pedidos_cancelados (copia con auditoría) o mismo pedidos con flag? (recomiendo: mismo pedido en pedidos con estado_cocina:"Cancelado" + auditoría; el admin filtra ese estado.) 23. Motivos de cancelación reales (para el selector): confirmar estos — "Se fue sin pagar", "Error en el pedido", "Problema en cocina", "Producto agotado", "Cliente anuló el pedido", "Otro". 24. Regla de lectura: confirmás que anónimos (sin login) puedan leer productos, config/categorias y mesas (para saber que la mesa existe y su zona) — y que el create de un pedido de mesa exija mesa_id válido + cliente_uid prefijado con mesa:.
+
+H) Infra / PWA 25. server.js exacto: sirve estático + rutas SPA + endpoint GET /qr/:mesa.png (genero el QR con una librería tipo qrcode) para que el admin descargue e imprima. ¿Puerto default 3000, HTTP local + ngrok para los otros? Confirmar. 26. ¿Agrego PWA (manifest + service worker) para que el cliente móvil pueda instalar la app a pantalla completa? (recomiendo sí, bajo costo). ¿Y para staff la dejás igual (web normal)? 27. Pregunta 7 que no entendiste (te la reexplico simple): cuando cocina recibe un pedido, actualmente lo ve solo en la pantalla grande (KDS). Mi pregunta era: ¿necesitás además que una impresora térmica imprima la comanda con el número de mesa, para que el mozo la lleve físicamente; o con verla en la pantalla alcanza y el mozo va con el número en la cabeza/pedido? Decime cuál.
+
+Con esto cierro el SCHEMA-BDD, ESTRUCTURA-APP y CONTEXTO (los 3 .md) y después implemento en este orden: colección mesas + seed → reglas → router/QR → cliente móvil + checkout mesa → tracker → cocina (mesa en comanda) → dashboard cajero mesas + cobro/vuelto → admin (CRUD mesas + editor plano + cancelados + QR) → delivery → PWA/server.
+
+¿Respondés las preguntas (A→H) así los cierro y arrancamos?
+
+
+
+----
+A: cuando me referia a q me des ideas y hagamos un buen proyecto, no configurar nada 
+B: 
+2-todo lo q tiene q ver con la mesas y su gestion completa y crud completo, se hace en el panel de admin, lo q hay q hacer es la herramienta para poder personalizar estas mesas y tener todo automatizado para q se integre de manera automatica en la app y no genere errores,  
+3-  hagamoslo calculando, un cuadrado son 2 o 4 personas, dos cuadraddos juntos ya sea horizontal o verticalmente pues seri para 6 personas, y 3 cuadrados juntos 8, hagamos un max de 8, asi se ve bien visualmente 
+
+
+4- esto si :""mover mesas" = arrastrar y soltar en una vista aérea con guardado de posición X/Y?  " el resto no se pueden personalizar, ni el numero ni la forma ni el color ya  qson automaticos, lo q puedes hacer son varios apartados, crear mesas, un lugar de donde arrastrar estas mesas, 
+
+lo q tengo duda es q pasaria si el admin quiere eliminar nose la mesa 4, quedaria inhabilitada momentaniamente  por asi decirlo
+lo q quiero es permitir la perosnalizacion de los cuadrados, por ahora no va a ver ni mubles ni nada, simplemete una cuadrilla de se mantenga ajustada automaticamente, asi se ven bien cuando ya tnega todas la mesas en la pestaña seleccionada, 
+
+tambien hay q hacer una lista de mesas, asi se puede arrastrar comodamente, y editar sus datos, agg todas las funciones de personalizacion q se te ocurran 
+
+5- si lo basico y extra, pero q se vea bien q no colapse el cuadradito 
+6- si a todo 
+
+C:   
+
+
+
+
+
+_-------------------------
+
+
+
+Listo. Los 3 archivos .md creados:
+
+Archivo	Tamaño	Contenido
+SCHEMA-BDD.md	5.9 KB	Colecciones, campos, índices, reglas, estados mesa, capacidad
+ESTRUCTURA-APP.md	13 KB	Rutas, archivos nuevos/modificados, componentes UI, flujos, server.js, PWA
+CONTEXTO.md	9.2 KB	Decisiones arquitectura, flujos QR/MP/cobro/cancelación, roles, seguridad, pendientes
+Próximos pasos (cuando quieras codear):
+
+Fase 1: js/services/mesas.js + js/seed.js (seed mesas + índices)
+Fase 2: firestore.rules actualizadas
+Fase 3: server.js + package.json + npm install
+Fase 4: js/router.js + js/auth.js (QR detection, modo mesa, timeouts, rol tv)
+Fase 5: Admin Mesas (CRUD + Editor drag&drop)
+Fase 6: Cliente Mesa PWA + Checkout Mesa
+Fase 7: Tracker Mesa
+Fase 8: Cocina (nº mesa + Tab Historial + Entregado)
+Fase 9: Cajero Dashboard Mesas + Cobro + Verif MP
+Fase 10: Admin Cancelados + Usuarios staff + QR Mesas
+Fase 11: TV Lobby (/tv)
+Fase 12: Factura/Imprimir + Delivery
+Fase 13: PWA manifest + SW + install prompt
+Fase 14: Testing integrado
+¿Arrancamos con la Fase 1 cuando quieras?
+
+
+
+
+---------------
+PRONT BASE
+
+
+Eres un desarrollador senior trabajando en la app Rotiseria SYM.
+
+REGLAS OBLIGATORIAS:
+1. Lee primero TODOS los archivos .md del proyecto antes de hacer cualquier cambio:
+   - SCHEMA-BDD.md (esquema Firestore)
+   - ESTRUCTURA-APP.md (archivos, rutas, componentes)
+   - CONTEXTO.md (decisiones de arquitectura)
+   - STYLE_APP.md (sistema dual de diseno CSS)
+   - README.md (roadmap y estado actual)
+   - AGENT.md (reglas de output)
+
+2. Sigue el orden de construccion:
+   - Estamos en FASE 0.5 (refactorizacion) -> FASE 1-14
+   - NO saltar fases
+   - Consultar el roadmap en README.md
+
+3. Reglas de codigo:
+   - IIFE en todos los archivos (() => { ... })()
+   - Usar utilidades de js/utils.js (no duplicar funciones)
+   - Separar en services/ y views/
+   - Naming consistente: renderizar*, escuchar*, dejarDeEscuchar*
+
+4. NO hagas cambios sin preguntar primero.
+5. Muestra diff de cada cambio antes de aplicarlo.
+
+ARCHIVOS CLAVE PARA EMPEZAR (FASE 0.5):
+- Crear js/utils.js (claseEstado, formatearPrecio, etc.)
+- Envolver archivos existentes en IIFE
+- Split admin.js -> admin.js + admin-menu.js + admin-ventas.js
+- Split cajero.js -> cajero.js + cajero-pos.js + cajero-mesas.js
+- Fix productos.js (cross-layer leak)
+- Mover seed.js fuera de index.html
+
+Por donde quieres que empiece?
+
+
+---------------------------
+21/08/2026
+
+FASE 0.5 — Refactorización : Completada. Todos los archivos JS envueltos en IIFE, funciones compartidas extraídas a utils.js, admin.js dividido en 3 archivos, cajero.js dividido en 3 archivos, cross-layer leak en productos.js corregido, seed.js limpiado, index.html actualizado con nuevo orden de scripts.
+
+FASE 1 — Mesas + Config : Completada. Creados mesas.js (CRUD completo), config.js (lectura única → window.APP_CONFIG), seedMesas() agregado a seed.js, router.js actualizado para cargar config al arrancar, índices Firestore documentados.
+
+FASE 2 — Reglas Firestore : Completada. firestore.rules creado en raíz con reglas para mesas, pedidos anónimos de mesa ( mesa:*), roles tv/ cocina/ cajero/ admin, cancelación con cancelado_por+ motivo obligatorios. Duplicado en documentacion/ reemplazado por nota de referencia.
+
+Files and Code Summary
+js/utils.js: Nuevo. Contiene claseEstado, formatearPrecio, hashSHA256, traducirErrorAuth, mismoDia, mismaSemanana, mismoMes. Todas expuestas como globales directas ( window.X).
+
+js/services/config.js: Nuevo. Carga config/sistema una vez → window.APP_CONFIG. Fallback a DEFAULTS hardcodeados si Firestore falla. Crea el documento si no existe.
+
+js/services/mesas.js: Nuevo. CRUD completo: escucharMesas (todas activas, ordenadas zona+número), crearMesa (calcula capacidad por tamaño), actualizarMesa, actualizarPosicionMesa, desactivarMesa (guard pedidos activos), activarMesa, eliminarMesa (guard histórico), obtenerZonas. Tamaños: 1x1=4p, 1x2/ 2x1=6p, 2x2=8p.
+
+js/services/productos.js: IIFE. Cross-layer leak eliminado (ya no toca _unsubCategorias de cliente.js).
+
+js/services/carrito.js: IIFE. Sin cambios funcionales.
+
+js/services/pedidos.js: IIFE. Sin cambios funcionales.
+
+js/services/usuarios.js: IIFE. Sin cambios funcionales.
+
+js/auth.js: IIFE. traducirErrorAuth eliminada (usa utils.js).
+
+js/router.js: IIFE. Llama cargarConfig() al inicio de iniciarRouter() antes de onAuthStateChanged. Agrega clases body modo-cajero, modo-admin. Expone _pedidoActivoId via Object.defineProperty.
+
+js/app.js: IIFE. formatearPrecio eliminada (usa utils.js). Expone mostrarToast, abrirCarrito, cerrarCarrito, abrirModal, cerrarModal.
+
+js/views/login.js: IIFE. Usa traducirErrorAuth de utils.
+
+js/views/cliente.js: IIFE. Cleanup de _unsubCategorias interno (ya no depende de productos.js).
+
+js/views/checkout.js: IIFE. Sin cambios funcionales.
+
+js/views/tracker.js: IIFE. Usa claseEstado de utils. Usa setPedidoActivo(null) en lugar de acceso directo a _pedidoActivoId.
+
+js/views/cocina.js: IIFE. Usa claseEstado de utils.
+
+js/views/admin.js: Reescrito como orchestrator. Estado compartido window._productosAdmin y window._categoriasAdmin. Tab "Herramientas" con botón manual ejecutarPatchArchivado(). patchArchivado ya NO es automático.
+
+js/views/admin-menu.js: Nuevo. CRUD productos + categorías extraído de admin.js. Lee/escribe window._categoriasAdmin y window._productosAdmin.
+
+js/views/admin-ventas.js: Nuevo. Resumen ventas. Usa mismoDia, mismaSemanana, mismoMes, claseEstado de utils.
+
+js/views/cajero.js: Reescrito como orchestrator. Llama iniciarCobros() e iniciarPOS(). Sin parche banner.
+
+js/views/cajero-mesas.js: Nuevo. Cobros pendientes + historial + modal cobro. Usa claseEstado de utils.
+
+js/views/cajero-pos.js: Nuevo. Terminal POS completo. Expone iniciarPOS, switchCajeroTab (llamado desde cajero.js).
+
+js/seed.js: IIFE. Expone seedProductos() y seedMesas(). seedMesas() crea 6 mesas (Salón: 1,2,3,4 / Pateo: 5,6) y config/sistema si no existe.
+
+firestore.rules: Nuevo en raíz. Reglas completas con helpers isAuth, getRole, hasRole, hasAnyRole, isMesaRequest, soloEstadoCocina, soloEntregadoMozo, esCancelacionValida, soloFieldsCobro.
+
+documentacion/indices-firestore.txt: 5 índices documentados con campos y link directo a Firebase Console.
+
+documentacion/firestore.rules: Reemplazado por nota de referencia al archivo real en raíz.
+
+index.html: Scripts actualizados: agrega utils.js, mesas.js, config.js, admin-menu.js, admin-ventas.js, cajero-mesas.js, cajero-pos.js en orden correcto.
+
+Key Insights
+REGLA CRÍTICA : Globales directas ( window.claseEstado()), NO namespace Utils. Hay 75+ onclick="" en el HTML que dependen de globales directas.
+
+REGLA IIFE : Todos los archivos en IIFE. Funciones privadas con prefijo _ NO se exponen. Solo se expone lo necesario via window.X.
+
+NAMING : renderizar*, escuchar*, dejarDeEscuchar*.
+
+patchArchivado : Movido a botón manual en Admin → Herramientas. NO automático.
+
+APP_CONFIG : Cargado una vez en router.js → window.APP_CONFIG. Todas las vistas leen sin async.
+
+Pedidos mesa anónimos : request.auth == null + cliente_uid.matches('mesa:.*') → permitido crear pedido.
+
+Cancelación : Regla exige cancelado_por + motivo_cancelacion presentes. Hash SHA-256 validado solo en JS cliente.
+
+entregado_mozo : Solo rol cocina puede marcarlo. tv es solo display.
+
+Pasarela de pago : Pendiente, no simular.
+
+Seed mesas : Solo para testing. Lo importante es el EDITOR en Admin → Mesas (FASE 5) para que cada local configure sus propias mesas.
+
+Zonas : "Salón" y "Pateo" (no "Terraza").
+
+Capacidades : 1x1=4p, 1x2/ 2x1=6p, 2x2=8p. Máximo 8 personas.
+
+Most Recent Topic
+Topic : FASE 2 — Reglas Firestore
+
+Progress : Completada. firestore.rules creado en raíz del proyecto con reglas completas.
+
+Pendientes externos del usuario :
+
+Firebase Console → Firestore → Rules → pegar firestore.rules y publicar
+
+Firebase Console → Firestore → Indexes → crear 5 índices (ver documentacion/indices-firestore.txt)
+
+Consola navegador (sesión admin) → ejecutar seedMesas()
+
+Consola navegador → hashSHA256("supervisor666").then(h => console.log(h)) → actualizar supervisor_hash en config/sistema en Firebase Console
+
+Firebase Console → Authentication → Settings → Authorized domains → agregar localhost
+
+Próxima fase : FASE 3 — server.js + package.json (servidor Node.js estático + rutas SPA + endpoint QR)
+
+Tools Used :
+
+fsRead : Leyó documentacion/firestore.rules para verificar contenido antes de reemplazar
+
+fsWrite (create) : Creó firestore.rules en raíz con reglas completas
+
+fsWrite (create) : Reemplazó documentacion/firestore.rules con nota de referencia

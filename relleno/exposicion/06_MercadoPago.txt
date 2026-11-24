@@ -1,0 +1,144 @@
+GUÍA DE EXPOSICIÓN: MERCADO PAGO EN ROTISERÍA SYM
+================================================================================
+
+FECHA: 2026-09-03
+VERSIÓN: v12.4
+
+--------------------------------------------------------------------------------
+1. ¿QUÉ ES MERCADO PAGO Y QUÉ ROL CUMPLE?
+--------------------------------------------------------------------------------
+Gateway de pagos: procesa el dinero, nosotros NO guardamos datos bancarios.
+Flujo: Frontend pide preferencia → Backend crea en MP → MP devuelve link checkout → Usuario paga → Webhook avisa a backend → Marcamos "Pagado" en Firestore.
+
+--------------------------------------------------------------------------------
+2. CREDENCIALES (DÓNDE VA CADA UNA)
+--------------------------------------------------------------------------------
+┌────────────────────┬──────────────────────────────────────────────────────────┐
+│ CLAVE              │ USO                                                      │
+├────────────────────┼──────────────────────────────────────────────────────────┤
+│ PUBLIC_KEY         │ Solo FRONTEND: inicializa SDK JS, renderiza botón/checkout│
+│ (APP_USR-...)      │ Se ve en código cliente (no es secreta)                  │
+├────────────────────┼──────────────────────────────────────────────────────────┤
+│ ACCESS_TOKEN       │ Solo BACKEND (server.js): crea preferencias, consulta    │
+│ (APP_USR-... /     │ pagos, valida webhook. ¡NUNCA en frontend! Variable de   │
+│ TEST-...)          │ entorno: MP_ACCESS_TOKEN                                 │
+└────────────────────┴──────────────────────────────────────────────────────────┘
+
+Sandbox vs Producción: mismas claves pero distinto prefijo (TEST- vs APP_USR-).
+En .env: `MP_ACCESS_TOKEN=TEST-...` (dev) / `APP_USR-...` (prod)
+
+--------------------------------------------------------------------------------
+3. FLUJO COMPLETO EN NUESTRO CÓDIGO
+--------------------------------------------------------------------------------
+
+PASO 1: FRONTEND (cliente.js) - Pide preferencia al backend
+```js
+// Usuario elige "Mercado Pago" y confirma pedido
+const res = await fetch('/api/mp-preference-for-pedido', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ pedido_id: pedidoId })
+});
+const { init_point } = await res.json();
+window.location.href = init_point;  // Redirect a checkout MP
+```
+
+PASO 2: BACKEND (server.js) - Crea preferencia con Access Token
+```js
+const mercadopago = require('mercadopago');
+mercadopago.configure({ access_token: process.env.MP_ACCESS_TOKEN });
+
+app.post('/api/mp-preference-for-pedido', async (req, res) => {
+  const pedido = await db.collection('pedidos').doc(req.body.pedido_id).get();
+  const data = pedido.data();
+
+  const preference = {
+    items: data.items.map(i => ({
+      title: i.nombre,
+      quantity: i.cantidad,
+      unit_price: i.precio_unitario,
+      currency_id: 'ARS'
+    })),
+    back_urls: {
+      success: `https://tudominio.com/?mesa=${data.mesa_id}&pago=exito`,
+      failure: `https://tudominio.com/?mesa=${data.mesa_id}&pago=fallo`,
+      pending: `https://tudominio.com/?mesa=${data.mesa_id}&pago=pendiente`
+    },
+    auto_return: 'approved',
+    external_reference: req.body.pedido_id,  // CLAVE: vinculamos pago ↔ pedido
+    notification_url: 'https://tudominio.com/api/webhook'
+  };
+
+  const response = await mercadopago.preferences.create(preference);
+  res.json({ id: response.body.id, init_point: response.body.init_point });
+});
+```
+
+PASO 3: WEBHOOK (server.js) - MP avisa pago aprobado
+```js
+app.post('/api/webhook', (req, res) => {
+  // 1. Validar firma HMAC (seguridad: asegura que venga de MP)
+  const signature = req.headers['x-signature'];
+  const valid = validarFirmaHMAC(signature, req.rawBody, process.env.MP_WEBHOOK_SECRET);
+  if (!valid) return res.sendStatus(401);
+
+  // 2. Si es payment.approved → consultar detalle
+  if (req.body.type === 'payment') {
+    const payment = await mercadopago.payment.findById(req.body.data.id);
+    if (payment.body.status === 'approved') {
+      const pedidoIds = JSON.parse(payment.body.external_reference); // array
+      const batch = db.batch();
+      pedidoIds.forEach(id => {
+        const ref = db.collection('pedidos').doc(id);
+        batch.update(ref, {
+          estado_pago: 'Pagado',
+          metodo_pago: 'MercadoPago',
+          mp_payment_id: payment.body.id,
+          mp_status: payment.body.status,
+          fecha_cobro: admin.firestore.FieldValue.serverTimestamp()
+        });
+      });
+      await batch.commit();
+    }
+  }
+  res.sendStatus(200);  // Siempre 200 para que MP no reintente
+});
+```
+
+--------------------------------------------------------------------------------
+4. ENDPOINTS REALES EN ROTISERÍA SYM
+--------------------------------------------------------------------------------
+┌──────────────────────────────────┬────────┬────────────────────────────────────┐
+│ ENDPOINT                         │ MÉTODO │ QUÉ HACE                           │
+├──────────────────────────────────┼────────┼────────────────────────────────────┤
+│ /api/mp-preference-for-pedido    │ POST   │ Crea preferencia 1 pedido (v12.4)  │
+│ /api/mp-preference-for-mesa      │ POST   │ Crea preferencia TODOS pedidos mesa│
+│ /api/create-preference           │ POST   │ Genérico (items directos del body) │
+│ /api/webhook                     │ POST   │ Recibe notificación MP (HMAC)      │
+└──────────────────────────────────┴────────┴────────────────────────────────────┘
+
+--------------------------------------------------------------------------------
+5. CHECKLIST PARA QUE FUNCIONE SIN PROBLEMAS
+--------------------------------------------------------------------------------
+☐ Access Token SOLO en backend (.env, nunca en repo)
+☐ Webhook Secret configurado en MP Dashboard → Tu URL /api/webhook
+☐ external_reference = pedido_id (string o JSON array) para vincular al recibir webhook
+☐ notification_url = URL pública HTTPS (ngrok en dev, dominio real en prod)
+☐ back_urls con ?mesa=N para volver a la app cliente
+☐ Validar firma HMAC en webhook (evita spoofing)
+☐ Responder 200 OK SIEMPRE en webhook (MP reintenta si no)
+☐ Probar en Sandbox (TEST- keys) antes de producción
+☐ Índice Firestore: estado_pago + mesa_id (para consultar no pagados en caja)
+
+--------------------------------------------------------------------------------
+6. PUNTOS CLAVE EXPO
+--------------------------------------------------------------------------------
+- "Separación estricta: Public Key en frontend, Access Token en backend (.env)"
+- "external_reference es el puente: nos dice QUÉ pedido(s) pagó el usuario"
+- "Webhook + HMAC = seguridad: solo MP puede marcar 'Pagado' en nuestra BDD"
+- "Batch write: un webhook puede pagar múltiples pedidos de una mesa a la vez"
+- "Sandbox = testing gratis con tarjetas de prueba (4509 9535 6623 3704 aprox)"
+
+================================================================================
+FIN DOCUMENTO 06_MercadoPago.txt
+================================================================================
